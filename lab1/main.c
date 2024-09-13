@@ -89,6 +89,7 @@ void list_directory(const char *path, int show_all, int long_format) {
     // Массив для хранения информации о файлах
     file_info *files = NULL;
     int count = 0;
+    int st_block = 0;
     int max_size_length = 0;
 
     // Чтение содержимого директории
@@ -118,6 +119,7 @@ void list_directory(const char *path, int show_all, int long_format) {
         }
 
         count++;
+        st_block = st_block + file_stat.st_blocks / 2;
     }
 
     // Закрытие директории
@@ -125,6 +127,9 @@ void list_directory(const char *path, int show_all, int long_format) {
 
     // Сортировка файлов по имени
     qsort(files, count, sizeof(file_info), compare_files);
+
+    // Вывод места на диске
+    printf("total %d\n", st_block);
 
     // Вывод файлов
     for (int i = 0; i < count; i++) {
