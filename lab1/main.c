@@ -17,6 +17,12 @@
 #define COLOR_EXEC "\x1B[32m"  // зелёный
 #define COLOR_LINK "\x1B[36m"  // бирюзовый
 
+// Структура для хранения информации о файлах
+typedef struct {
+    char *name;
+    struct stat file_stat;
+} file_info;
+
 // Функция для вывода прав доступа в формате rwxr-xr-x
 void print_permissions(mode_t mode) {
     char permissions[11] = "----------";
@@ -38,14 +44,15 @@ void print_permissions(mode_t mode) {
 }
 
 // Функция для вывода информации в стиле `-l`
-void print_long_format(const char* path, const struct stat* file_stat) {
-    struct passwd *pw = getpwuid(file_stat->st_uid);
-    struct group  *gr = getgrgid(file_stat->st_gid);
+void print_long_format(const file_info* file, int max_size_length) {
+    struct passwd *pw = getpwuid(file->file_stat.st_uid);
+    struct group  *gr = getgrgid(file->file_stat.st_gid);
     char timebuf[80];
-    strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&file_stat->st_mtime));
+    strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&file->file_stat.st_mtime));
 
-    print_permissions(file_stat->st_mode);
-    printf("%ld %s %s %ld %s ", file_stat->st_nlink, pw->pw_name, gr->gr_name, file_stat->st_size, timebuf);
+    print_permissions(file->file_stat.st_mode);
+    printf("%ld %s %s %*ld %s ", file->file_stat.st_nlink, pw->pw_name, gr->gr_name,
+           max_size_length, file->file_stat.st_size, timebuf);
 }
 
 // Функция для вывода имени файла с цветами
@@ -61,6 +68,13 @@ void print_name_with_color(const char *name, const struct stat *file_stat) {
     }
 }
 
+// Функция для сортировки файлов по имени
+int compare_files(const void *a, const void *b) {
+    file_info *file_a = (file_info *)a;
+    file_info *file_b = (file_info *)b;
+    return strcmp(file_a->name, file_b->name);
+}
+
 // Основная функция для вывода списка файлов
 void list_directory(const char *path, int show_all, int long_format) {
     struct dirent *entry;
@@ -72,42 +86,53 @@ void list_directory(const char *path, int show_all, int long_format) {
         return;
     }
 
-    // Массив для хранения имён файлов
-    char **files = NULL;
+    // Массив для хранения информации о файлах
+    file_info *files = NULL;
     int count = 0;
+    int max_size_length = 0;
 
     // Чтение содержимого директории
     while ((entry = readdir(dp)) != NULL) {
         // Пропуск скрытых файлов, если опция -a не включена
         if (!show_all && entry->d_name[0] == '.') continue;
 
-        files = realloc(files, sizeof(char*) * (count + 1));
-        files[count] = strdup(entry->d_name);
+        // Формирование полного пути к файлу
+        char full_path[1024];
+        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
+
+        // Получение информации о файле
+        if (stat(full_path, &file_stat) == -1) {
+            perror("stat");
+            continue;
+        }
+
+        // Запоминание информации о файле
+        files = realloc(files, sizeof(file_info) * (count + 1));
+        files[count].name = strdup(entry->d_name);
+        files[count].file_stat = file_stat;
+
+        // Вычисление максимальной длины размера файла для выравнивания
+        int size_length = snprintf(NULL, 0, "%ld", file_stat.st_size);
+        if (size_length > max_size_length) {
+            max_size_length = size_length;
+        }
+
         count++;
     }
 
     // Закрытие директории
     closedir(dp);
 
-    // Сортировка имён файлов
-    qsort(files, count, sizeof(char*), (int (*)(const void *, const void *))strcmp);
+    // Сортировка файлов по имени
+    qsort(files, count, sizeof(file_info), compare_files);
 
     // Вывод файлов
     for (int i = 0; i < count; i++) {
-        char full_path[1024];
-        snprintf(full_path, sizeof(full_path), "%s/%s", path, files[i]);
-
-        if (stat(full_path, &file_stat) == -1) {
-            perror("stat");
-            free(files[i]);
-            continue;
-        }
-
         if (long_format) {
-            print_long_format(full_path, &file_stat);
+            print_long_format(&files[i], max_size_length);
         }
 
-        print_name_with_color(files[i], &file_stat);
+        print_name_with_color(files[i].name, &files[i].file_stat);
 
         if (long_format) {
             printf("\n");
@@ -115,7 +140,7 @@ void list_directory(const char *path, int show_all, int long_format) {
             printf("  ");
         }
 
-        free(files[i]);
+        free(files[i].name);
     }
 
     free(files);
