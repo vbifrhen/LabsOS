@@ -57,10 +57,36 @@ void print_long_format(const file_info* file, int max_size_length) {
 
 // Функция для вывода имени файла с цветами
 void print_name_with_color(const char *name, const struct stat *file_stat) {
-    if (S_ISDIR(file_stat->st_mode)) {
+    if (S_ISLNK(file_stat->st_mode)) {
+        char target[1024];
+        int len = readlink(file_path, target, sizeof(target));
+        if(len == -1){
+            perror("readlink");
+            printf("%s", entry->d_name);
+            return;
+        }
+        target[len] = '\0';
+
+        struct stat target_stat;
+        char target_path[1025];
+        target_path[0] = '/';
+        snprintf(target_path + 1, sizeof(target_path) - 1, "%s", target);
+        lstat(target_path, &target_stat);
+        printf(COLOR_LINK "%s" COLOR_NORMAL, entry->d_name);
+        if(long_format){
+            printf(" -> ");
+            if(S_ISDIR(target_stat.st_mode)){
+                printf(COLOR_DIR "%s" COLOR_NORMAL, target);
+            }
+            else if(target_stat.st_mode & S_IXUSR){
+                printf(COLOR_EXEC "%s" COLOR_NORMAL, target);
+            }
+            else{
+                printf("%s", target);
+            }
+        }
+    } else if (S_ISDIR(file_stat->st_mode)) {
         printf(COLOR_DIR "%s" COLOR_NORMAL, name);
-    } else if (S_ISLNK(file_stat->st_mode)) {
-        printf(COLOR_LINK "%s" COLOR_NORMAL, name);
     } else if (file_stat->st_mode & S_IXUSR) {
         printf(COLOR_EXEC "%s" COLOR_NORMAL, name);
     } else {
