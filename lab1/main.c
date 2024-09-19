@@ -128,12 +128,7 @@ void print_name_with_color(const char *name, const struct stat *file_stat, const
 int compare_files(const void *a, const void *b) {
     file_info *file_a = (file_info *)a;
     file_info *file_b = (file_info *)b;
-    int res = strcasecmp(file_a->name, file_b->name);
-    if (res == 0) {
-        return strcmp(file_a->name, file_b->name);
-    }
-
-    return res;
+    return strcasecmp(file_a->name, file_b->name);
 }
 
 // Основная функция для вывода списка файлов
