@@ -70,18 +70,15 @@ void print_name_with_color(const char *name, const struct stat *file_stat, const
             printf(COLOR_LINK "%s" COLOR_NORMAL, name);
             return;
         }
-        target[len] = '\0';  // Завершаем строку
-
-        struct stat target_stat;
-        if (stat(target, &target_stat) == -1) {
-            perror("stat");
-        }
+        target[len] = '\0';  // Завершаем строку        
 
         // Выводим символическую ссылку с цветом
         printf(COLOR_LINK "%s" COLOR_NORMAL, name);
 
         // Если формат длинный, выводим, куда ведёт ссылка
         if (long_format) {
+            struct stat target_stat;
+            stat(target, &target_stat);
             printf(" -> ");
             if (S_ISDIR(target_stat.st_mode)) {
                 printf(COLOR_DIR "%s" COLOR_NORMAL, target);
