@@ -231,7 +231,9 @@ void list_directory(const char *path, int show_all, int long_format) {
     qsort(files, count, sizeof(file_info), compare_files);
 
     // Вывод места на диске
-    printf("total %d\n", st_block);
+    if (show_all || long_format) {
+        printf("total %d\n", st_block);
+    }
 
     // Вывод файлов
     for (int i = 0; i < count; i++) {
