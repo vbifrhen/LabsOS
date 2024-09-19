@@ -1,5 +1,5 @@
 .PHONY: all myls run clean
-all: main.c
+all: myls
 myls: main.c
 	gcc main.c -o myls
 run: myls
