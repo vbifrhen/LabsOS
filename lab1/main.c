@@ -44,7 +44,7 @@ void print_permissions(mode_t mode) {
 }
 
 // Функция для вывода информации в стиле `-l`
-void print_long_format(const file_info* file, int max_size_length, int max_nlink_length) {
+void print_long_format(const file_info* file, int max_size_length, int max_nlink_length, int max_user_length, int max_group_length) {
     struct passwd *pw = getpwuid(file->file_stat.st_uid);
     struct group  *gr = getgrgid(file->file_stat.st_gid);
     char timebuf[80];
@@ -59,8 +59,8 @@ void print_long_format(const file_info* file, int max_size_length, int max_nlink
     }
     
     print_permissions(file->file_stat.st_mode);
-    printf("%*ld %s %s %*ld %s ", max_nlink_length, file->file_stat.st_nlink, pw->pw_name, gr->gr_name,
-           max_size_length, file->file_stat.st_size, timebuf);
+    printf("%*ld %-*s %-*s %*ld %s ", max_nlink_length, file->file_stat.st_nlink, max_user_length, pw->pw_name, max_group_length,
+           gr->gr_name, max_size_length, file->file_stat.st_size, timebuf);
 }
 
 // Функция для вывода имени файла с цветами и обработкой символических ссылок
@@ -132,6 +132,8 @@ void list_directory(const char *path, int show_all, int long_format) {
     int st_block = 0;
     int max_size_length = 0;
     int max_nlink_length = 0;
+    int max_user_length = 0;
+    int max_group_length = 0;
 
     // Чтение содержимого директории
     while ((entry = readdir(dp)) != NULL) {
@@ -153,16 +155,28 @@ void list_directory(const char *path, int show_all, int long_format) {
         files[count].name = strdup(entry->d_name);
         files[count].file_stat = file_stat;
 
-        // Вычисление максимальной длины размера файла для выравнивания
+        // Вычисление максимальной длины размера файлов для выравнивания
         int size_length = snprintf(NULL, 0, "%ld", file_stat.st_size);
         if (size_length > max_size_length) {
             max_size_length = size_length;
         }
 
-        // Вычисление максимальной длины жёстких ссылок файла для выравнивания
+        // Вычисление максимальной длины жёстких ссылок файлов для выравнивания
         int nlink_length = snprintf(NULL, 0, "%ld", file_stat.st_nlink);
         if (nlink_length > max_nlink_length) {
             max_nlink_length = nlink_length;
+        }
+
+        // Вычисление максимальной длины пользователя файлов для выравнивания
+        int user_length = strlen(pw->pw_name);
+        if (user_length > max_user_length) {
+            max_user_length = user_length;
+        }
+
+        // Вычисление максимальной длины групп файлов для выравнивания
+        int group_length = strlen(gr->gr_name);
+        if (group_length > max_group_length) {
+            max_group_length = group_length;
         }
 
         count++;
@@ -181,7 +195,7 @@ void list_directory(const char *path, int show_all, int long_format) {
     // Вывод файлов
     for (int i = 0; i < count; i++) {
         if (long_format) {
-            print_long_format(&files[i], max_size_length, max_nlink_length);
+            print_long_format(&files[i], max_size_length, max_nlink_length, int max_user_length, int max_group_length);
         }
 
         print_name_with_color(files[i].name, &files[i].file_stat, path, long_format);
