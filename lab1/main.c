@@ -166,7 +166,9 @@ void list_directory(const char *path, int show_all, int long_format) {
         if (nlink_length > max_nlink_length) {
             max_nlink_length = nlink_length;
         }
-
+        
+        struct passwd *pw = getpwuid(file_stat.st_uid);
+        struct group  *gr = getgrgid(file_stat.st_gid);
         // Вычисление максимальной длины пользователя файлов для выравнивания
         int user_length = strlen(pw->pw_name);
         if (user_length > max_user_length) {
@@ -195,7 +197,7 @@ void list_directory(const char *path, int show_all, int long_format) {
     // Вывод файлов
     for (int i = 0; i < count; i++) {
         if (long_format) {
-            print_long_format(&files[i], max_size_length, max_nlink_length, int max_user_length, int max_group_length);
+            print_long_format(&files[i], max_size_length, max_nlink_length, max_user_length, max_group_length);
         }
 
         print_name_with_color(files[i].name, &files[i].file_stat, path, long_format);
