@@ -85,7 +85,10 @@ void print_name_with_color(const char *name, const struct stat *file_stat, const
         // Если формат длинный, выводим, куда ведёт ссылка
         if (long_format) {
             struct stat target_stat;
-            stat(target, &target_stat);
+            char target_path[1025];
+            target_path[0] = '/';
+            snprintf(target_path + 1, sizeof(target_path) - 1, "%s", target);
+            lstat(target_path, &target_stat);
             printf(" -> ");
             if (S_ISDIR(target_stat.st_mode)) {
                 printf(COLOR_DIR "%s" COLOR_NORMAL, target);
@@ -166,7 +169,7 @@ void list_directory(const char *path, int show_all, int long_format) {
         if (nlink_length > max_nlink_length) {
             max_nlink_length = nlink_length;
         }
-        
+
         struct passwd *pw = getpwuid(file_stat.st_uid);
         struct group  *gr = getgrgid(file_stat.st_gid);
         // Вычисление максимальной длины пользователя файлов для выравнивания
