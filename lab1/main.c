@@ -48,7 +48,16 @@ void print_long_format(const file_info* file, int max_size_length, int max_nlink
     struct passwd *pw = getpwuid(file->file_stat.st_uid);
     struct group  *gr = getgrgid(file->file_stat.st_gid);
     char timebuf[80];
-    strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&file->file_stat.st_mtime));
+    time_t now;
+    time(&now);
+    // Если дата создания более чем 6 месяцев
+    if (file->file_stat.st_mtime > now - 6*30*24*60*60) {
+        strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&file->file_stat.st_mtime));
+    } 
+    else {
+        strftime(timebuf, sizeof(timebuf), "%b %d  %Y", localtime(&file->file_stat.st_mtime));
+    }
+    
     print_permissions(file->file_stat.st_mode);
     printf("%*ld %s %s %*ld %s ", max_nlink_length, file->file_stat.st_nlink, pw->pw_name, gr->gr_name,
            max_size_length, file->file_stat.st_size, timebuf);
@@ -150,6 +159,7 @@ void list_directory(const char *path, int show_all, int long_format) {
             max_size_length = size_length;
         }
 
+        // Вычисление максимальной длины размера файла для выравнивания
         int nlink_length = snprintf(NULL, 0, "%ld", file_stat.st_nlink);
         if (nlink_length > max_nlink_length) {
             max_nlink_length = nlink_length;
