@@ -1,18 +1,18 @@
 CC=gcc
 CFLAGS=-Wall -Werror -Wextra
 
-# Build directory
-BUILD_DIR=../build
-
 # Default target
-all: s21_cat
+all: my_cat my_grep
 
-s21_cat:
-	$(CC) $(CFLAGS) ./s21_cat.c -o ./s21_cat 
+my_cat:
+	$(CC) $(CFLAGS) cat.c -o my_cat 
+
+my_grep:
+	$(CC) $(CFLAGS) grep.c -o my_grep 
 	
 # Clean target
 clean:
-	rm -f ./s21_cat
+	rm -f my_cat my_grep
 
 # Rebuild target
 rebuild: clean all
