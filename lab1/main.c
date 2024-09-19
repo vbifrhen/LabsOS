@@ -56,43 +56,53 @@ void print_long_format(const file_info* file, int max_size_length) {
 }
 
 // Функция для вывода имени файла с цветами
-void print_name_with_color(const char *name, const struct stat *file_stat) {
+// Функция для вывода имени файла с цветами и обработкой символических ссылок
+void print_name_with_color(const char *name, const struct stat *file_stat, const char *path, int long_format) {
+    char full_path[1024];
+    snprintf(full_path, sizeof(full_path), "%s/%s", path, name);
+
+    // Если это символическая ссылка
     if (S_ISLNK(file_stat->st_mode)) {
         char target[1024];
-        int len = readlink(file_path, target, sizeof(target));
-        if(len == -1){
+        int len = readlink(full_path, target, sizeof(target) - 1);
+        if (len == -1) {
             perror("readlink");
-            printf("%s", entry->d_name);
+            printf(COLOR_LINK "%s" COLOR_NORMAL, name);
             return;
         }
-        target[len] = '\0';
+        target[len] = '\0';  // Завершаем строку
 
         struct stat target_stat;
-        char target_path[1025];
-        target_path[0] = '/';
-        snprintf(target_path + 1, sizeof(target_path) - 1, "%s", target);
-        lstat(target_path, &target_stat);
-        printf(COLOR_LINK "%s" COLOR_NORMAL, entry->d_name);
-        if(long_format){
+        if (stat(target, &target_stat) == -1) {
+            perror("stat");
+        }
+
+        // Выводим символическую ссылку с цветом
+        printf(COLOR_LINK "%s" COLOR_NORMAL, name);
+
+        // Если формат длинный, выводим, куда ведёт ссылка
+        if (long_format) {
             printf(" -> ");
-            if(S_ISDIR(target_stat.st_mode)){
+            if (S_ISDIR(target_stat.st_mode)) {
                 printf(COLOR_DIR "%s" COLOR_NORMAL, target);
-            }
-            else if(target_stat.st_mode & S_IXUSR){
+            } else if (target_stat.st_mode & S_IXUSR) {
                 printf(COLOR_EXEC "%s" COLOR_NORMAL, target);
-            }
-            else{
+            } else {
                 printf("%s", target);
             }
         }
     } else if (S_ISDIR(file_stat->st_mode)) {
+        // Директория
         printf(COLOR_DIR "%s" COLOR_NORMAL, name);
     } else if (file_stat->st_mode & S_IXUSR) {
+        // Исполняемый файл
         printf(COLOR_EXEC "%s" COLOR_NORMAL, name);
     } else {
+        // Обычный файл
         printf("%s", name);
     }
 }
+
 
 // Функция для сортировки файлов по имени
 int compare_files(const void *a, const void *b) {
@@ -128,8 +138,8 @@ void list_directory(const char *path, int show_all, int long_format) {
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
 
         // Получение информации о файле
-        if (stat(full_path, &file_stat) == -1) {
-            perror("stat");
+        if (lstat(full_path, &file_stat) == -1) {
+            perror("lstat");
             continue;
         }
 
@@ -163,7 +173,7 @@ void list_directory(const char *path, int show_all, int long_format) {
             print_long_format(&files[i], max_size_length);
         }
 
-        print_name_with_color(files[i].name, &files[i].file_stat);
+        print_name_with_color(files[i].name, &files[i].file_stat, path, long_format);
 
         if (long_format) {
             printf("\n");
