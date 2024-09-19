@@ -44,18 +44,16 @@ void print_permissions(mode_t mode) {
 }
 
 // Функция для вывода информации в стиле `-l`
-void print_long_format(const file_info* file, int max_size_length) {
+void print_long_format(const file_info* file, int max_size_length, int max_nlink_length) {
     struct passwd *pw = getpwuid(file->file_stat.st_uid);
     struct group  *gr = getgrgid(file->file_stat.st_gid);
     char timebuf[80];
     strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&file->file_stat.st_mtime));
-
     print_permissions(file->file_stat.st_mode);
-    printf("%ld %s %s %*ld %s ", file->file_stat.st_nlink, pw->pw_name, gr->gr_name,
+    printf("%*ld %s %s %*ld %s ", max_nlink_length, file->file_stat.st_nlink, pw->pw_name, gr->gr_name,
            max_size_length, file->file_stat.st_size, timebuf);
 }
 
-// Функция для вывода имени файла с цветами
 // Функция для вывода имени файла с цветами и обработкой символических ссылок
 void print_name_with_color(const char *name, const struct stat *file_stat, const char *path, int long_format) {
     char full_path[1024];
@@ -124,6 +122,7 @@ void list_directory(const char *path, int show_all, int long_format) {
     int count = 0;
     int st_block = 0;
     int max_size_length = 0;
+    int max_nlink_length = 0;
 
     // Чтение содержимого директории
     while ((entry = readdir(dp)) != NULL) {
@@ -151,6 +150,11 @@ void list_directory(const char *path, int show_all, int long_format) {
             max_size_length = size_length;
         }
 
+        int nlink_length = snprintf(NULL, 0, "%ld", file_stat.st_nlink);
+        if (nlink_length > max_nlink_length) {
+            max_nlink_length = nlink_length;
+        }
+
         count++;
         st_block = st_block + file_stat.st_blocks / 2;
     }
@@ -167,7 +171,7 @@ void list_directory(const char *path, int show_all, int long_format) {
     // Вывод файлов
     for (int i = 0; i < count; i++) {
         if (long_format) {
-            print_long_format(&files[i], max_size_length);
+            print_long_format(&files[i], max_size_length, max_nlink_length);
         }
 
         print_name_with_color(files[i].name, &files[i].file_stat, path, long_format);
