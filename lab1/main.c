@@ -59,8 +59,20 @@ void print_long_format(const file_info* file, int max_size_length, int max_nlink
     }
     
     print_permissions(file->file_stat.st_mode);
-    printf("%*ld %-*s %-*s %*ld %s ", max_nlink_length, file->file_stat.st_nlink, max_user_length, pw->pw_name, max_group_length,
-           gr->gr_name, max_size_length, file->file_stat.st_size, timebuf);
+    printf("%*ld ", max_nlink_length, file->file_stat.st_nlink);
+    if (pw != NULL) {
+        printf("%-*s ", max_user_length, pw->pw_name);
+    }
+    else {
+        printf("%*d ", max_user_length, file->file_stat.st_uid);
+    }
+    if (gr != NULL) {
+        printf("%-*s ", max_group_length, gr->gr_name);
+    }
+    else {
+        printf("%*d ", max_user_length, file->file_stat.st_gid);
+    }
+    printf("%*ld %s ", max_size_length, file->file_stat.st_size, timebuf);
 }
 
 // Функция для вывода имени файла с цветами и обработкой символических ссылок
@@ -137,6 +149,11 @@ void list_directory(const char *path, int show_all, int long_format) {
     int max_nlink_length = 0;
     int max_user_length = 0;
     int max_group_length = 0;
+    struct passwd *pw;
+    struct group  *gr;
+    int user_length;
+    int group_length;
+
 
     // Чтение содержимого директории
     while ((entry = readdir(dp)) != NULL) {
@@ -170,16 +187,29 @@ void list_directory(const char *path, int show_all, int long_format) {
             max_nlink_length = nlink_length;
         }
 
-        struct passwd *pw = getpwuid(file_stat.st_uid);
-        struct group  *gr = getgrgid(file_stat.st_gid);
+        pw = getpwuid(file_stat.st_uid);
+        gr = getgrgid(file_stat.st_gid);
+
         // Вычисление максимальной длины пользователя файлов для выравнивания
-        int user_length = strlen(pw->pw_name);
+        if (pw != NULL) {
+            user_length = strlen(pw->pw_name);
+        }
+        else {
+            user_length = snprintf(NULL, 0, "%d", file_stat.st_uid);
+        }
+
         if (user_length > max_user_length) {
             max_user_length = user_length;
         }
 
         // Вычисление максимальной длины групп файлов для выравнивания
-        int group_length = strlen(gr->gr_name);
+        if (gr != NULL) {
+            group_length = strlen(gr->gr_name);
+        }
+        else {
+            group_length = snprintf(NULL, 0, "%d", file_stat.st_gid);
+        }
+
         if (group_length > max_group_length) {
             max_group_length = group_length;
         }
