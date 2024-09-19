@@ -159,7 +159,7 @@ void list_directory(const char *path, int show_all, int long_format) {
             max_size_length = size_length;
         }
 
-        // Вычисление максимальной длины размера файла для выравнивания
+        // Вычисление максимальной длины жёстких ссылок файла для выравнивания
         int nlink_length = snprintf(NULL, 0, "%ld", file_stat.st_nlink);
         if (nlink_length > max_nlink_length) {
             max_nlink_length = nlink_length;
