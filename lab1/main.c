@@ -58,6 +58,7 @@ void print_long_format(const file_info* file, int max_size_length, int max_nlink
         strftime(timebuf, sizeof(timebuf), "%b %d  %Y", localtime(&file->file_stat.st_mtime));
     }
     
+    // Используем цифры если имени или группы в системе не найдено
     print_permissions(file->file_stat.st_mode);
     printf("%*ld ", max_nlink_length, file->file_stat.st_nlink);
     if (pw != NULL) {
@@ -190,7 +191,7 @@ void list_directory(const char *path, int show_all, int long_format) {
         pw = getpwuid(file_stat.st_uid);
         gr = getgrgid(file_stat.st_gid);
 
-        // Вычисление максимальной длины пользователя файлов для выравнивания
+        // Вычисление максимальной длины пользователя файлов для выравнивания, используем цифры если имени в системе не найдено
         if (pw != NULL) {
             user_length = strlen(pw->pw_name);
         }
@@ -202,7 +203,7 @@ void list_directory(const char *path, int show_all, int long_format) {
             max_user_length = user_length;
         }
 
-        // Вычисление максимальной длины групп файлов для выравнивания
+        // Вычисление максимальной длины групп файлов для выравнивания, используем цифры если группы в системе не найдено
         if (gr != NULL) {
             group_length = strlen(gr->gr_name);
         }
