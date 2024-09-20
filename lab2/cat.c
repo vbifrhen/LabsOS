@@ -5,33 +5,45 @@
 #include <string.h>
 #include <unistd.h>
 
-void output_string(int simb, int flag_V, int onlyE, int onlyT);
-void print_to_file(FILE *file, int option);
 
+// Основная программа
 int main(int argc, char *argv[]) {
-  int option;
+    int num_not_empty = 0;
+    int num_all = 0;
+    int end_symb = 0;
+    int opt;
 
-  static const struct option long_options[] = {
-      {"number-nonblank", no_argument, NULL, 'b'},
-      {"number", no_argument, NULL, 'n'},
-      {"squeeze-blank", no_argument, NULL, 's'},
-      {NULL, 0, NULL, 0},
-  };
+    // Обработка опций с помощью getopt
+    while ((opt = getopt(argc, argv, "bEn")) != -1) {
+        switch (opt) {
+            case 'b':
+                num_not_empty = 1;
+                break;
+            case 'n':
+                num_all = 1;
+                break;
+            case 'E':
+                end_symb = 1;
+                break;
+            default:
+                fprintf(stderr, "Usage: %s [-n] [-b] [-E]\n", argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
 
-  option = getopt_long(argc, argv, "+beEnvstT", long_options, NULL);
-  FILE *file = fopen(argv[optind], "r");
-  if (!file) {
-    printf("Error opening file\n");
-    return 1;
-  }
-  if (option != -1) {
-    print_to_file(file, option);
-    fclose(file);
-  } else {
-    print_to_file(file, option);
-    fclose(file);
-  }
-  return 0;
+    // Если директория не указана, использовать текущую
+    if (optind >= argc) {
+        fprintf(stderr, "No input", argv[0]);
+        exit(EXIT_FAILURE);
+    } else {
+        // Вывод содержимого указанных директорий
+        for (int i = optind; i < argc; i++) {
+            printf("%s:\n", argv[i]);
+            print_to_file(argv[i], show_all, long_format);
+        }
+    }
+
+    return 0;
 }
 
 void print_to_file(FILE *file, int option) {
