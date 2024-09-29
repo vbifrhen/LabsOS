@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     switch (opt) {
       case 'b':
         flag_b = 1;
+        flag_n = 0;
         break;
       case 'n':
         flag_n = 1;
