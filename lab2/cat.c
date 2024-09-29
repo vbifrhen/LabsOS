@@ -5,127 +5,103 @@
 #include <string.h>
 #include <unistd.h>
 
+void output_string(int simb, int flag_V, int onlyE, int onlyT);
+void print_to_file(FILE *file, int flag_b, int flag_n, int flag_s, int flag_e, int flag_t, int flag_v);
 
-// Основная программа
 int main(int argc, char *argv[]) {
-    int num_not_empty = 0;
-    int num_all = 0;
-    int end_symb = 0;
-    int opt;
+  int opt;
+  int flag_b = 0, flag_n = 0, flag_s = 0, flag_e = 0, flag_t = 0, flag_v = 0;
 
-    // Обработка опций с помощью getopt
-    while ((opt = getopt(argc, argv, "bEn")) != -1) {
-        switch (opt) {
-            case 'b':
-                num_not_empty = 1;
-                break;
-            case 'n':
-                num_all = 1;
-                break;
-            case 'E':
-                end_symb = 1;
-                break;
-            default:
-                fprintf(stderr, "Usage: %s [-n] [-b] [-E]\n", argv[0]);
-                exit(EXIT_FAILURE);
-        }
+  static const struct option long_options[] = {
+      {"number-nonblank", no_argument, NULL, 'b'},
+      {"number", no_argument, NULL, 'n'},
+      {"squeeze-blank", no_argument, NULL, 's'},
+      {NULL, 0, NULL, 0},
+  };
+
+   while ((opt = getopt_long(argc, argv, "benstvET", long_options, NULL)) != -1) {
+    switch (opt) {
+      case 'b':
+        flag_b = 1;
+        break;
+      case 'n':
+        flag_n = 1;
+        break;
+      case 's':
+        flag_s = 1;
+        break;
+      case 'e':
+        flag_e = 1;
+        flag_v = 1;
+        break;
+      case 't':
+        flag_t = 1;
+        flag_v = 1;
+        break;
+      case 'v':
+        flag_v = 1;
+        break;
+      case 'E':
+        flag_e = 1;
+        break;
+      case 'T':
+        flag_t = 1;
+        break;
+      default:
+        fprintf(stderr, "Unknown option '-%c'\n", opt);
+        return 1;
     }
-
-    // Если директория не указана, использовать текущую
-    if (optind >= argc) {
-        fprintf(stderr, "No input", argv[0]);
-        exit(EXIT_FAILURE);
-    } else {
-        // Вывод содержимого указанных директорий
-        for (int i = optind; i < argc; i++) {
-            printf("%s:\n", argv[i]);
-            print_to_file(argv[i], show_all, long_format);
-        }
+  }
+  if (optind < argc) {
+    for (int i = optind; i < argc; i++) {
+      FILE *file = fopen(argv[i], "r");
+      if (!file) {
+        fprintf(stderr, "Error opening file: %s\n", argv[i]);
+        return 1;
+      }
+      print_to_file(file, flag_b, flag_n, flag_s, flag_e, flag_t, flag_v);
+      fclose(file);
     }
+  } else {
+    // Если файл не указан, читаем из стандартного ввода
+    print_to_file(stdin, flag_b, flag_n, flag_s, flag_e, flag_t, flag_v);
+  }
 
-    return 0;
+  return 0;
 }
 
-void print_to_file(FILE *file, int option) {
-  char txt_file[1000];
+void print_to_file(FILE *file, int flag_b, int flag_n, int flag_s, int flag_e, int flag_t, int flag_v) {
+  char line[1000];
   int counter = 0;
+  int blank_line_counter = 0;
   int ch;
-  switch (option) {
-    case 'b':
-      while (fgets(txt_file, 1000, file) != NULL) {
-        if (txt_file[0] != '\n') {
-          counter++;
-          printf("%6d\t%s", counter, txt_file);
-        } else {
-          printf("%s", txt_file);
-        }
-      }
-      break;
-    case 'e':
-      ch = fgetc(file);
-      while (ch != EOF) {
-        output_string(ch, 1, 1, 0);
-        ch = fgetc(file);
-      }
-      break;
 
-    case 'n':
-      while (fgets(txt_file, 1000, file) != NULL) {
-        counter++;
-        printf("%6d\t%s", counter, txt_file);
+  while (fgets(line, sizeof(line), file) != NULL) {
+    // Squeeze blank lines
+    if (flag_s && line[0] == '\n') {
+      if (blank_line_counter > 0) {
+        continue;
       }
-      break;
+      blank_line_counter++;
+    } else {
+      blank_line_counter = 0;
+    }
 
-    case 's':
-      while (fgets(txt_file, 1000, file) != NULL) {
-        if (txt_file[0] != '\n') {
-          counter = 0;
-          printf("%s", txt_file);
-        } else if (counter < 1) {
-          printf("%s", txt_file);
-          counter++;
-        }
-      }
-      break;
+    if (flag_b && line[0] != '\n') {
+      counter++;
+      printf("%6d\t", counter);
+    } else if (flag_n) {
+      counter++;
+      printf("%6d\t", counter);
+    }
 
-    case 't':
-      ch = fgetc(file);
-      while (ch != EOF) {
-        output_string(ch, 1, 0, 1);
-        ch = fgetc(file);
-      }
-      break;
-
-    case 'v':
-      ch = fgetc(file);
-      while (ch != EOF) {
-        output_string(ch, 1, 0, 0);
-        ch = fgetc(file);
-      }
-      break;
-
-    case 'E':
-      ch = fgetc(file);
-      while (ch != EOF) {
-        output_string(ch, 0, 1, 0);
-        ch = fgetc(file);
-      }
-      break;
-
-    case 'T':
-      ch = fgetc(file);
-      while (ch != EOF) {
-        output_string(ch, 0, 0, 1);
-        ch = fgetc(file);
-      }
-      break;
-
-    default:
-      while (fgets(txt_file, 256, file) != NULL) {
-        printf("%s", txt_file);
-      }
+    for (int i = 0; line[i] != '\0'; i++) {
+      ch = line[i];
+      output_string(ch, flag_v, flag_e, flag_t);
+    }
   }
 }
+
 
 void output_string(int simb, int flag_V, int flag_E, int flag_T) {
   if ('\t' == simb && flag_T) {
