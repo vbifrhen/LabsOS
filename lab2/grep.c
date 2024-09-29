@@ -111,9 +111,7 @@ char* templatesCreator(FILE* fp) {  //Функция создания шабло
 
 void searchForMatches(
     FILE* fp, char* filename, int file_numbers, struct flags opts,
-    char* template) {  //Функция поиска совпадений в файле. Использует
-                       //регулярные выражения для поиска строк, соответствующих
-                       //заданному шаблону.
+    char* template) {
   regex_t regex;
   regmatch_t pmatch[1];
   regmatch_t matches[1];
@@ -121,10 +119,12 @@ void searchForMatches(
   int number = 1;
   int sign = 0;  // str printed
   char buffer[1000];
+  
+  // Компиляция регулярного выражения
   regcomp(
       &regex, template,
-      REG_EXTENDED |
-          (opts.i ? REG_ICASE : 0));  // если есть опция игнорирования регистра
+      REG_EXTENDED | (opts.i ? REG_ICASE : 0));  // если есть опция игнорирования регистра
+
   while ((fgets(buffer, 1000, fp)) != NULL) {
     int res = regexec(&regex, buffer, 0, pmatch, 0);
     if (opts.v == 1) {
@@ -140,17 +140,34 @@ void searchForMatches(
       if (opts.n == 1) {
         printf("%d:", number);
       }
-      char* buffer_o = buffer;  // поиск подстрок в строке
+      
+      // Если используется флаг `-o`, выводим только совпадения с подсветкой
+      char* buffer_o = buffer;
       if (opts.o == 1) {
         while ((regexec(&regex, buffer_o, 1, matches, 0) == 0)) {
-          printf("%.*s\n", (int)(matches[0].rm_eo - matches[0].rm_so),
+          // Печать с выделением цветом
+          printf("%.*s\033[31m%.*s\033[0m", (int)(matches[0].rm_so),
+                 buffer_o, (int)(matches[0].rm_eo - matches[0].rm_so),
                  buffer_o + matches[0].rm_so);
           buffer_o += matches[0].rm_eo;
+          printf("\n");
         }
       } else {
-        printf("%s", buffer);
+        // Печать всей строки с выделением найденного совпадения
+        char* ptr = buffer;
+        while (regexec(&regex, ptr, 1, matches, 0) == 0) {
+          // Печать до совпадения
+          printf("%.*s", (int)(matches[0].rm_so), ptr);
+          // Печать совпадения с красным цветом
+          printf("\033[31m%.*s\033[0m", (int)(matches[0].rm_eo - matches[0].rm_so),
+                 ptr + matches[0].rm_so);
+          ptr += matches[0].rm_eo;
+        }
+        printf("%s", ptr);  // Печать остатка строки после последнего совпадения
         sign = 1;
       }
+
+      // Если строка не закончилась переносом строки, добавляем его
       if ((strchr(buffer, '\n') == NULL) && (sign == 1)) {
         printf("\n");
       }
@@ -159,6 +176,7 @@ void searchForMatches(
     number++;
   }
 
+  // Вывод результата для флагов `-c` и `-l`
   if (opts.c == 1) {
     if ((opts.l == 1) && (search_strings != 0)) {
       search_strings = 1;
@@ -172,5 +190,7 @@ void searchForMatches(
   if ((opts.l == 1) && (search_strings != 0)) {
     printf("%s\n", filename);
   }
+  
+  // Освобождение памяти, выделенной под регулярное выражение
   regfree(&regex);
 }
