@@ -1,4 +1,5 @@
 #include "grep_lib.h"
+#include <unistd.h>
 
 int main(int argc, char* argv[]) {
   struct flags flags_and_index = parsingProcess(argc, argv);
@@ -40,44 +41,45 @@ struct flags parsingProcess(int argc, char* argv[]) {
   return buffer;
 }
 
-void grepFileManager(
-    int argc, char* argv[],
-    struct flags opts) {  //Функция управления файлами. Определяет количество
-                          //файлов, для которых нужно выполнить поиск. Проверяет
-                          //наличие опций для поиска и устанавливает значения по
-                          //умолчанию, если опции не указаны.
-  int file_numbers = 0;
-  if (opts.index + 2 < argc) {
-    file_numbers = 1;
-  }
-  if (opts.e + opts.c + opts.l + opts.v + opts.f + opts.o == 0) {
-    opts.e = 1;
-  }
-  if (opts.v == 1) {
-    opts.o = 0;
-  }
-  if ((opts.c == 1) && (opts.h == 1)) {
-    opts.h = 0;
-    file_numbers = 0;
-  }
-  if (opts.f == 1) {
-    FILE* fp;
-    if ((fp = fopen(argv[opts.index], "r+")) != NULL) {
-      char* templates = templatesCreator(fp);
-      for (int i = opts.index + 1; i < argc; i++) {
-        step(argv[i], file_numbers, opts, templates);
-      }
-      free(templates);
-      fclose(fp);
+void grepFileManager(int argc, char* argv[], struct flags opts) {
+    int file_numbers = 0;
+    // Проверка, поступают ли данные через стандартный ввод
+    if (isatty(STDIN_FILENO) == 0) {
+        searchForMatches(stdin, NULL, 0, opts, argv[opts.index]);
+        return;
+    }
+
+    if (opts.index + 2 < argc) {
+        file_numbers = 1;
+    }
+    if (opts.e + opts.c + opts.l + opts.v + opts.f + opts.o == 0) {
+        opts.e = 1;
+    }
+    if (opts.v == 1) {
+        opts.o = 0;
+    }
+    if ((opts.c == 1) && (opts.h == 1)) {
+        opts.h = 0;
+        file_numbers = 0;
+    }
+    if (opts.f == 1) {
+        FILE* fp;
+        if ((fp = fopen(argv[opts.index], "r+")) != NULL) {
+            char* templates = templatesCreator(fp);
+            for (int i = opts.index + 1; i < argc; i++) {
+                step(argv[i], file_numbers, opts, templates);
+            }
+            free(templates);
+            fclose(fp);
+        } else {
+            printf("grep: %s: No such file or directory\n", argv[opts.index]);
+        }
     } else {
-      printf("grep: %s: No such file or directory\n", argv[opts.index]);
+        char* template = argv[opts.index];
+        for (int i = opts.index + 1; i < argc; i++) {
+            step(argv[i], file_numbers, opts, template);
+        }
     }
-  } else {
-    char* template = argv[opts.index];
-    for (int i = opts.index + 1; i < argc; i++) {
-      step(argv[i], file_numbers, opts, template);
-    }
-  }
 }
 
 void step(char* filename, int file_numbers, struct flags opts, char* template) {
