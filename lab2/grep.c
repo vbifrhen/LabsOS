@@ -159,7 +159,7 @@ void searchForMatches(
           // Печать до совпадения
           printf("%.*s", (int)(matches[0].rm_so), ptr);
           // Печать совпадения с красным цветом
-          printf("\033[31m%.*s\033[0m", (int)(matches[0].rm_eo - matches[0].rm_so),
+          printf("\033[1;31m%.*s\033[0m", (int)(matches[0].rm_eo - matches[0].rm_so),
                  ptr + matches[0].rm_so);
           ptr += matches[0].rm_eo;
         }

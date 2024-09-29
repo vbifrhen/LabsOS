@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-Wall -Werror -Wextra
 
 # Default target
-all: my_cat my_grep
+all: rebuild
 
 my_cat:
 	$(CC) $(CFLAGS) cat.c -o my_cat 
@@ -15,6 +15,6 @@ clean:
 	rm -f my_cat my_grep
 
 # Rebuild target
-rebuild: clean all
+rebuild: clean my_cat my_grep
 
-.PHONY: clean all s21_cat
+.PHONY: clean all my_cat my_grep

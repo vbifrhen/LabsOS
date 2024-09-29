@@ -63,10 +63,10 @@ int main(int argc, char *argv[]) {
       fclose(file);
     }
   } else {
-    // Если файл не указан, читаем из стандартного ввода
     print_to_file(stdin, flag_b, flag_n, flag_s, flag_e, flag_t, flag_v);
   }
 
+  printf("\n");
   return 0;
 }
 
