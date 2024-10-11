@@ -7,17 +7,17 @@
 
 // Обработчик выхода программы
 void exit_handler() {
-    printf("Программа завершила работу\n");
+    printf("[AtExit] Программа завершила работу (ID: %d)\n", getpid());
 }
 
 // Обработчик сигнала SIGINT
 void sigint_handler(int sig) {
-    printf("Получен сигнал SIGINT (ID: %d)\n", sig);
+    printf("[SIGINT] Получен сигнал (ID: %d)\n", sig);
 }
 
 // Обработчик сигнала SIGTERM
 void sigterm_handler(int sig) {
-    printf("Получен сигнал SIGTERM (ID: %d)\n", sig);
+    printf("[SIGTERM] Получен сигнал (ID: %d)\n", sig);
     exit(0);  // Корректное завершение родительского процесса
 }
 
@@ -60,7 +60,7 @@ int main() {
         // Родительский процесс
         printf("Родительский процесс. child_pid: %d, дочерний child_pid: %d\n", getpid(), child_pid);
         waitpid(child_pid, NULL, 0);  // Ожидание завершения конкретного дочернего процесса
-        printf("Дочерний процесс завершился.\n");
+        printf("Родительский процесс после дочернего.\n");
     }
 
     return 0;
