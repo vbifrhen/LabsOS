@@ -44,13 +44,13 @@ int main() {
         return 1;
     }
     
-    pid_t pid = fork();
+    pid_t child_pid = fork();
 
-    if (pid < 0) {
+    if (child_pid  < 0) {
         // Ошибка при вызове fork()
         perror("Ошибка при вызове fork()");
         exit(1);
-    } else if (pid == 0) {
+    } else if (child_pid == 0) {
         // Дочерний процесс
         printf("Дочерний процесс. PID: %d\n", getpid());
         sleep(5); // Дочерний процесс ждет 5 секунд
@@ -59,7 +59,7 @@ int main() {
     } else {
         // Родительский процесс
         printf("Родительский процесс. PID: %d, дочерний PID: %d\n", getpid(), pid);
-        wait(NULL); // Ожидание завершения дочернего процесса
+        waitpid(child_pid, NULL, 0); // Ожидание завершения дочернего процесса
         printf("Дочерний процесс завершился.\n");
     }
 
