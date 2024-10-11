@@ -5,31 +5,31 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-
-// Обработка выхода проги
+// Обработчик выхода программы
 void exit_handler() {
-    printf("Прога завершила работу\n");
+    printf("Программа завершила работу\n");
 }
 
-// Обработка сигнала SIGNIT
-void signal_handler(int sig) {
+// Обработчик сигнала SIGINT
+void sigint_handler(int sig) {
     printf("Получен сигнал SIGINT (ID: %d)\n", sig);
 }
 
-// Обработка сигнала SIGTERM
+// Обработчик сигнала SIGTERM
 void sigterm_handler(int sig) {
-    printf("Получен сигнал SIGINT (ID: %d)\n", sig);
+    printf("Получен сигнал SIGTERM (ID: %d)\n", sig);
+    exit(0);  // Корректное завершение родительского процесса
 }
 
 int main() {
-    // Установка обработчика выхода
+    // Регистрация обработчика выхода
     if (atexit(exit_handler) != 0) {
         perror("Ошибка при установке обработчика выхода");
         return 1;
     }
 
-    // Установка сигнала SIGINT
-    if (signal(SIGINT, signal_handler) == SIG_ERR) {
+    // Установка обработчика сигнала SIGINT
+    if (signal(SIGINT, sigint_handler) == SIG_ERR) {
         perror("Ошибка при установке обработчика SIGINT");
         return 1;
     }
@@ -43,24 +43,24 @@ int main() {
         perror("Ошибка при установке обработчика SIGTERM");
         return 1;
     }
-    
+
     pid_t child_pid = fork();
 
-    if (child_pid  < 0) {
+    if (child_pid < 0) {
         // Ошибка при вызове fork()
         perror("Ошибка при вызове fork()");
         exit(1);
     } else if (child_pid == 0) {
         // Дочерний процесс
-        printf("Дочерний процесс. PID: %d\n", getpid());
-        sleep(5); // Дочерний процесс ждет 5 секунд
+        printf("Дочерний процесс. child_pid: %d\n", getpid());
+        sleep(5);  // Дочерний процесс ждёт 5 секунд
         printf("Дочерний процесс завершен.\n");
         exit(0);
     } else {
         // Родительский процесс
-        printf("Родительский процесс. PID: %d, дочерний PID: %d\n", getpid(), child_pid);
-        waitpid(child_pid, NULL, 0); // Ожидание завершения дочернего процесса
-        printf("Родительский процесс пошёл после дочернего.\n");
+        printf("Родительский процесс. child_pid: %d, дочерний child_pid: %d\n", getpid(), child_pid);
+        waitpid(child_pid, NULL, 0);  // Ожидание завершения конкретного дочернего процесса
+        printf("Дочерний процесс завершился.\n");
     }
 
     return 0;
