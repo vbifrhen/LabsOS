@@ -1,78 +1,78 @@
-echo TEST 1 - cat 1.txt / ../cat/s21_cat 1.txt
+echo TEST 1 - cat 1.txt / ../cat/my_cat 1.txt
 expect=$( cat 1.txt )
-res=$( ../cat/s21_cat 1.txt)
+res=$( ../cat/my_cat 1.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 2 - cat -v 1.txt / ../cat/s21_cat -v 1.txt 
+echo TEST 2 - cat -v 1.txt / ../cat/my_cat -v 1.txt 
 expect=$( cat -v 1.txt  )
-res=$( ../cat/s21_cat -v 1.txt )
+res=$( ../cat/my_cat -v 1.txt )
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 3 - cat -b meow.txt / ../cat/s21_cat -b meow.txt
+echo TEST 3 - cat -b meow.txt / ../cat/my_cat -b meow.txt
 expect=$( cat -b meow.txt )
-res=$( ../cat/s21_cat -b meow.txt)
+res=$( ../cat/my_cat -b meow.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 4 - cat -n meow.txt / ../cat/s21_cat -n meow.txt
+echo TEST 4 - cat -n meow.txt / ../cat/my_cat -n meow.txt
 expect=$( cat -n meow.txt)
-res=$( ../cat/s21_cat -n meow.txt)
+res=$( ../cat/my_cat -n meow.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 5 - cat -b meow.txt / ../cat/s21_cat --number-nonblank meow.txt
+echo TEST 5 - cat -b meow.txt / ../cat/my_cat --number-nonblank meow.txt
 expect=$( cat -b meow.txt)
-res=$( ../cat/s21_cat --number-nonblank meow.txt)
+res=$( ../cat/my_cat --number-nonblank meow.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 6 - cat -n meow.txt / ../cat/s21_cat --number meow.txt
+echo TEST 6 - cat -n meow.txt / ../cat/my_cat --number meow.txt
 expect=$( cat -n meow.txt )
-res=$( ../cat/s21_cat --number meow.txt)
+res=$( ../cat/my_cat --number meow.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi  
-echo TEST 7 - cat -e w.txt / ../cat/s21_cat -e w.txt
+echo TEST 7 - cat -e w.txt / ../cat/my_cat -e w.txt
 expect=$( cat -e w.txt )
-res=$( ../cat/s21_cat -e w.txt)
+res=$( ../cat/my_cat -e w.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 8 - cat -s meow.txt / ../cat/s21_cat -s meow.txt
+echo TEST 8 - cat -s meow.txt / ../cat/my_cat -s meow.txt
 expect=$( cat -s meow.txt )
-res=$( ../cat/s21_cat -s meow.txt)
+res=$( ../cat/my_cat -s meow.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 9 - cat -s meow.txt / ../cat/s21_cat --squeeze-blank meow.txt
+echo TEST 9 - cat -s meow.txt / ../cat/my_cat --squeeze-blank meow.txt
 expect=$( cat -s meow.txt )
-res=$( ../cat/s21_cat --squeeze-blank meow.txt)
+res=$( ../cat/my_cat --squeeze-blank meow.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
     echo "FAIL"
 fi
-echo TEST 10 - cat -t 1.txt / ../cat/s21_cat -t 1.txt
+echo TEST 10 - cat -t 1.txt / ../cat/my_cat -t 1.txt
 expect=$( cat -t 1.txt )
-res=$( ../cat/s21_cat -t 1.txt)
+res=$( ../cat/my_cat -t 1.txt)
 if [ "$expect" == "$res" ]; then
     echo "OK"
 else
