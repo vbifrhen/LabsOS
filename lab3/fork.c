@@ -58,7 +58,7 @@ int main() {
         exit(0);
     } else {
         // Родительский процесс
-        printf("Родительский процесс. PID: %d, дочерний PID: %d\n", getpid(), pid);
+        printf("Родительский процесс. PID: %d, дочерний PID: %d\n", getpid(), child_pid);
         waitpid(child_pid, NULL, 0); // Ожидание завершения дочернего процесса
         printf("Дочерний процесс завершился.\n");
     }
