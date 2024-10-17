@@ -28,9 +28,13 @@ void apply_symbolic_mode(const char *mode_str, const char *file) {
         char who = mode_str[i];
         mode_t who_mask = 0;
 
-        if (who == 'u') who_mask = S_IRWXU;
-        else if (who == 'g') who_mask = S_IRWXG;
-        else if (who == 'o') who_mask = S_IRWXO;
+        if (who == 'u') {
+            who_mask = S_IRWXU;
+        } else if (who == 'g') { 
+            who_mask = S_IRWXG;
+        } else if (who == 'o') {
+            who_mask = S_IRWXO;
+        }
 
         i++;
         char operation = mode_str[i];
@@ -39,12 +43,19 @@ void apply_symbolic_mode(const char *mode_str, const char *file) {
         char perm = mode_str[i];
         mode_t perm_mask = 0;
 
-        if (perm == 'r') perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
-        else if (perm == 'w') perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
-        else if (perm == 'x') perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
+        if (perm == 'r') {
+            perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
+        } else if (perm == 'w') {
+            perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
+        } else if (perm == 'x') {
+            perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
+        }
 
-        if (operation == '+') mode |= who_mask & perm_mask;
-        else if (operation == '-') mode &= ~(who_mask & perm_mask);
+        if (operation == '+') {
+            mode |= who_mask & perm_mask;
+        } else if (operation == '-') {
+            mode &= ~(who_mask & perm_mask);
+        }
     }
 
     if (chmod(file, mode) != 0) {
