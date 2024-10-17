@@ -1,67 +1,77 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <string.h>
+#include <sys/stat.h>
 
 
-// Обработка выхода проги
-void exit_handler() {
-    printf("Прога завершила работу\n");
-}
-
-// Обработка сигнала SIGNIT
-void signal_handler(int sig) {
-    printf("Получен сигнал SIGINT (ID: %d)\n", sig);
-}
-
-// Обработка сигнала SIGTERM
-void sigterm_handler(int sig) {
-    printf("Получен сигнал SIGINT (ID: %d)\n", sig);
-}
-
-int main() {
-    // Установка обработчика выхода
-    if (atexit(exit_handler) != 0) {
-        perror("Ошибка при установке обработчика выхода");
-        return 1;
+mode_t parse_numeric_mode(const char *mode_str) {
+    // Проверяем, что строка длиной 3 или 4 символа и содержит только цифры
+    if ((strlen(mode_str) != 3 && strlen(mode_str) != 4) || !isdigit(mode_str[0]) || !isdigit(mode_str[1]) || !isdigit(mode_str[2])) {
+        fprintf(stderr, "Error: Invalid numeric mode format. Must be a 3-digit or 4-digit number.\n");
+        exit(EXIT_FAILURE);
     }
 
-    // Установка сигнала SIGINT
-    if (signal(SIGINT, signal_handler) == SIG_ERR) {
-        perror("Ошибка при установке обработчика SIGINT");
-        return 1;
+    // Преобразуем строку в восьмеричное число
+    return strtol(mode_str, NULL, 8);
+}
+
+
+void apply_symbolic_mode(const char *mode_str, const char *file) {
+    struct stat file_stat;
+    if (stat(file, &file_stat) != 0) {
+        perror("stat");
+        exit(EXIT_FAILURE);
+    }
+    mode_t mode = file_stat.st_mode;
+
+    for (int i = 0; mode_str[i]; i++) {
+        char who = mode_str[i];
+        mode_t who_mask = 0;
+
+        if (who == 'u') who_mask = S_IRWXU;
+        else if (who == 'g') who_mask = S_IRWXG;
+        else if (who == 'o') who_mask = S_IRWXO;
+
+        i++;
+        char operation = mode_str[i];
+
+        i++;
+        char perm = mode_str[i];
+        mode_t perm_mask = 0;
+
+        if (perm == 'r') perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
+        else if (perm == 'w') perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
+        else if (perm == 'x') perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
+
+        if (operation == '+') mode |= who_mask & perm_mask;
+        else if (operation == '-') mode &= ~(who_mask & perm_mask);
     }
 
-    // Установка обработчика сигнала SIGTERM через sigaction
-    struct sigaction sa;
-    sa.sa_handler = sigterm_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGTERM, &sa, NULL) == -1) {
-        perror("Ошибка при установке обработчика SIGTERM");
-        return 1;
+    if (chmod(file, mode) != 0) {
+        perror("chmod");
+        exit(EXIT_FAILURE);
     }
-    
-    pid_t child_pid = fork();
+}
 
-    if (child_pid  < 0) {
-        // Ошибка при вызове fork()
-        perror("Ошибка при вызове fork()");
-        exit(1);
-    } else if (child_pid == 0) {
-        // Дочерний процесс
-        printf("Дочерний процесс. PID: %d\n", getpid());
-        sleep(5); // Дочерний процесс ждет 5 секунд
-        printf("Дочерний процесс завершен.\n");
-        exit(0);
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        return EXIT_FAILURE;
+    }
+
+    const char *mode_str = argv[1];
+    const char *file = argv[2];
+
+    // Если права цифрами
+    if (isdigit(mode_str[0])) {
+        mode_t mode = parse_numeric_mode(mode_str);
+        if (chmod(file, mode) != 0) {
+            perror("chmod");
+            return EXIT_FAILURE;
+        }
     } else {
-        // Родительский процесс
-        printf("Родительский процесс. PID: %d, дочерний PID: %d\n", getpid(), child_pid);
-        waitpid(child_pid, NULL, 0); // Ожидание завершения дочернего процесса
-        printf("Родительский процесс пошёл после дочернего.\n");
+        // Права символами
+        apply_symbolic_mode(mode_str, file);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
