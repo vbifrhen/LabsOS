@@ -8,7 +8,7 @@
 mode_t parse_numeric_mode(const char *mode_str) {
     // Проверяем, что строка длиной 3 или 4 символа и содержит только цифры
     if ((strlen(mode_str) != 3 && strlen(mode_str) != 4) || !isdigit(mode_str[0]) || !isdigit(mode_str[1]) || !isdigit(mode_str[2])) {
-        fprintf(stderr, "Error: Invalid numeric mode format. Must be a 3-digit or 4-digit number.\n");
+        fprintf(stderr, "Неправильный числовой формат. Должно быть 3 или 4 значное число.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -47,7 +47,7 @@ void apply_symbolic_mode(const char *mode_str, const char *file) {
         // Проверяем операцию (+ или -)
         char operation = mode_str[i++];
         if (operation != '+' && operation != '-') {
-            fprintf(stderr, "Error: Invalid operation. Use + or -.\n");
+            fprintf(stderr, "Неправильный формат операции. Используйте + or -.\n");
             exit(EXIT_FAILURE);
         }
 
