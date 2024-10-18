@@ -25,37 +25,45 @@ void apply_symbolic_mode(const char *mode_str, const char *file) {
     }
     mode_t mode = file_stat.st_mode;
 
+    int who_specified = 0; // Флаг, указывающий, были ли указаны u, g или o
+
     for (int i = 0; mode_str[i]; i++) {
         char who = mode_str[i];
         mode_t who_mask = 0;
 
         if (who == 'u') {
             who_mask = S_IRWXU;
-        } else if (who == 'g') { 
+            who_specified = 1;
+        } else if (who == 'g') {
             who_mask = S_IRWXG;
+            who_specified = 1;
         } else if (who == 'o') {
             who_mask = S_IRWXO;
-        }
+            who_specified = 1;
+        } else if (who == '+' || who == '-') {
+            // Если символов u, g, o нет, применяем права ко всем категориям
+            if (!who_specified) {
+                who_mask = S_IRWXU | S_IRWXG | S_IRWXO;
+            }
 
-        i++;
-        char operation = mode_str[i];
+            char operation = who; // Операция (+ или -)
+            i++;
+            char perm = mode_str[i];
+            mode_t perm_mask = 0;
 
-        i++;
-        char perm = mode_str[i];
-        mode_t perm_mask = 0;
+            if (perm == 'r') {
+                perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
+            } else if (perm == 'w') {
+                perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
+            } else if (perm == 'x') {
+                perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
+            }
 
-        if (perm == 'r') {
-            perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
-        } else if (perm == 'w') {
-            perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
-        } else if (perm == 'x') {
-            perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
-        }
-
-        if (operation == '+') {
-            mode |= who_mask & perm_mask;
-        } else if (operation == '-') {
-            mode &= ~(who_mask & perm_mask);
+            if (operation == '+') {
+                mode |= who_mask & perm_mask;
+            } else if (operation == '-') {
+                mode &= ~(who_mask & perm_mask);
+            }
         }
     }
 
@@ -64,6 +72,7 @@ void apply_symbolic_mode(const char *mode_str, const char *file) {
         exit(EXIT_FAILURE);
     }
 }
+
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
