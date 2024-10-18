@@ -4,7 +4,7 @@ CFLAGS=-Wall -Werror -Wextra
 # Default target
 all: rebuild
 
-my_chmod:
+my_archiver:
 	$(CC) $(CFLAGS) archivator.c -o archiver
 	
 # Clean target
@@ -12,6 +12,6 @@ clean:
 	rm -f archiver
 
 # Rebuild target
-rebuild: clean archiver
+rebuild: clean my_archiver
 
-.PHONY: clean all archiver
+.PHONY: clean all my_archiver

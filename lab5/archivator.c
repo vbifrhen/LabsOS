@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <errno.h>
+#include <utime.h>
 
 #define MAX_FILENAME 256
 
