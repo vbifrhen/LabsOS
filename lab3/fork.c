@@ -55,12 +55,13 @@ int main() {
         printf("Дочерний процесс. child_pid: %d\n", getpid());
         sleep(10);  // Дочерний процесс ждёт 10 секунд
         printf("Дочерний процесс завершен.\n");
-        exit(0);
     } else {
+        int status;
         // Родительский процесс
         printf("Родительский процесс. pid: %d, дочерний child_pid: %d\n", getpid(), child_pid);
-        waitpid(child_pid, NULL, 0);  // Ожидание завершения конкретного дочернего процесса
-        printf("Родительский процесс после дочернего.\n");
+        waitpid(child_pid, &status, 0);  // Ожидание завершения конкретного дочернего процесса
+        printf("Родительский процесс после дочернего\n");
+        printf("Статус дочернего: %d\n", WEXITSTATUS(status));
     }
 
     return 0;
