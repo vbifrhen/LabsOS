@@ -25,53 +25,57 @@ void apply_symbolic_mode(const char *mode_str, const char *file) {
     }
     mode_t mode = file_stat.st_mode;
 
-    int who_specified = 0; // Флаг, указывающий, были ли указаны u, g или o
-
-    for (int i = 0; mode_str[i]; i++) {
-        char who = mode_str[i];
+    int i = 0;
+    while (mode_str[i]) {
         mode_t who_mask = 0;
+        int who_specified = 0;  // Флаг, указывающий, что хотя бы одна категория указана
 
-        if (who == 'u') {
-            who_mask = S_IRWXU;
+        // Проверяем категории (u, g, o) и строим маску
+        while (mode_str[i] == 'u' || mode_str[i] == 'g' || mode_str[i] == 'o') {
+            if (mode_str[i] == 'u') who_mask |= S_IRWXU;
+            if (mode_str[i] == 'g') who_mask |= S_IRWXG;
+            if (mode_str[i] == 'o') who_mask |= S_IRWXO;
             who_specified = 1;
-        } else if (who == 'g') {
-            who_mask = S_IRWXG;
-            who_specified = 1;
-        } else if (who == 'o') {
-            who_mask = S_IRWXO;
-            who_specified = 1;
-        } else if (who == '+' || who == '-') {
-            // Если символов u, g, o нет, применяем права ко всем категориям
-            if (!who_specified) {
-                who_mask = S_IRWXU | S_IRWXG | S_IRWXO;
-            }
-
-            char operation = who; // Операция (+ или -)
             i++;
-            char perm = mode_str[i];
+        }
+
+        // Если не указано, к кому применять права, применяем ко всем (u, g, o)
+        if (!who_specified) {
+            who_mask = S_IRWXU | S_IRWXG | S_IRWXO;
+        }
+
+        // Проверяем операцию (+ или -)
+        char operation = mode_str[i++];
+        if (operation != '+' && operation != '-') {
+            fprintf(stderr, "Error: Invalid operation. Use + or -.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Определяем права (r, w, x)
+        while (mode_str[i] == 'r' || mode_str[i] == 'w' || mode_str[i] == 'x') {
             mode_t perm_mask = 0;
+            if (mode_str[i] == 'r') perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
+            if (mode_str[i] == 'w') perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
+            if (mode_str[i] == 'x') perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
 
-            if (perm == 'r') {
-                perm_mask = S_IRUSR | S_IRGRP | S_IROTH;
-            } else if (perm == 'w') {
-                perm_mask = S_IWUSR | S_IWGRP | S_IWOTH;
-            } else if (perm == 'x') {
-                perm_mask = S_IXUSR | S_IXGRP | S_IXOTH;
-            }
-
+            // Применяем операцию
             if (operation == '+') {
                 mode |= who_mask & perm_mask;
             } else if (operation == '-') {
                 mode &= ~(who_mask & perm_mask);
             }
+
+            i++;
         }
     }
 
+    // Применяем изменённые права к файлу
     if (chmod(file, mode) != 0) {
         perror("chmod");
         exit(EXIT_FAILURE);
     }
 }
+
 
 
 int main(int argc, char *argv[]) {
