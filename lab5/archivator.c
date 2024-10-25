@@ -17,6 +17,7 @@ typedef struct {
     mode_t mode;
     time_t atime;
     time_t mtime;
+    int is_deleted;
 } FileMetadata;
 
 // Вывод справки
@@ -87,7 +88,7 @@ int add_file_to_archive(const char *archive_name, const char *file_name) {
 
 // Извлечение файла из архива
 int extract_file_from_archive(const char *archive_name, const char *file_name) {
-    int archive_fd = open(archive_name, O_RDONLY);
+    int archive_fd = open(archive_name, O_RDWR);
     if (archive_fd == -1) {
         perror("Error opening archive");
         return -1;
@@ -95,7 +96,17 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
 
     FileMetadata metadata;
     while (read(archive_fd, &metadata, sizeof(metadata)) == sizeof(metadata)) {
-        if (strcmp(metadata.filename, file_name) == 0) {
+        if (strcmp(metadata.filename, file_name) == 0 && metadata.is_deleted == 0) {
+            // Отметить файл как удаленный
+            metadata.is_deleted = 1;
+            lseek(archive_fd, -sizeof(metadata), SEEK_CUR);
+            if (write(archive_fd, &metadata, sizeof(metadata)) != sizeof(metadata)) {
+                perror("Error marking file as deleted");
+                close(archive_fd);
+                return -1;
+            }
+
+            // Извлечение файла
             int output_fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, metadata.mode);
             if (output_fd == -1) {
                 perror("Error creating extracted file");
@@ -103,6 +114,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
                 return -1;
             }
 
+            // Копирование данных файла
             char buffer[1024];
             ssize_t bytes_to_read = metadata.filesize;
             ssize_t bytes_read;
@@ -116,15 +128,9 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
                 bytes_to_read -= bytes_read;
             }
 
-            if (bytes_to_read != 0) {
-                fprintf(stderr, "Error: incomplete extraction\n");
-                close(output_fd);
-                close(archive_fd);
-                return -1;
-            }
-
+            // Восстановление временных меток
             struct utimbuf new_times;
-            new_times.actime = metadata.atime;
+            new_times.actime = metadata.atime;  
             new_times.modtime = metadata.mtime;
             utime(file_name, &new_times);
 
@@ -140,6 +146,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
     close(archive_fd);
     return -1;
 }
+
 
 // Показать содержимое архива
 int show_archive_status(const char *archive_name) {
