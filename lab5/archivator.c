@@ -88,33 +88,36 @@ int add_file_to_archive(const char *archive_name, const char *file_name) {
 
 // Извлечение файла из архива
 int extract_file_from_archive(const char *archive_name, const char *file_name) {
-    int archive_fd = open(archive_name, O_RDWR);
+    int archive_fd = open(archive_name, O_RDONLY);
     if (archive_fd == -1) {
         perror("Error opening archive");
         return -1;
     }
 
-    FileMetadata metadata;
-    while (read(archive_fd, &metadata, sizeof(metadata)) == sizeof(metadata)) {
-        if (strcmp(metadata.filename, file_name) == 0 && metadata.is_deleted == 0) {
-            // Отметить файл как удаленный
-            metadata.is_deleted = 1;
-            lseek(archive_fd, -sizeof(metadata), SEEK_CUR);
-            if (write(archive_fd, &metadata, sizeof(metadata)) != sizeof(metadata)) {
-                perror("Error marking file as deleted");
-                close(archive_fd);
-                return -1;
-            }
+    // Создание временного архива
+    int temp_fd = open("temp_archive", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (temp_fd == -1) {
+        perror("Error creating temporary archive");
+        close(archive_fd);
+        return -1;
+    }
 
-            // Извлечение файла
+    FileMetadata metadata;
+    int file_found = 0;
+
+    // Перебор всех файлов в архиве
+    while (read(archive_fd, &metadata, sizeof(metadata)) == sizeof(metadata)) {
+        if (strcmp(metadata.filename, file_name) == 0) {
+            // Файл найден, извлекаем его, но не копируем в новый архив
             int output_fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, metadata.mode);
             if (output_fd == -1) {
                 perror("Error creating extracted file");
                 close(archive_fd);
+                close(temp_fd);
                 return -1;
             }
 
-            // Копирование данных файла
+            // Чтение и запись содержимого файла
             char buffer[1024];
             ssize_t bytes_to_read = metadata.filesize;
             ssize_t bytes_read;
@@ -123,6 +126,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
                     perror("Error writing to extracted file");
                     close(output_fd);
                     close(archive_fd);
+                    close(temp_fd);
                     return -1;
                 }
                 bytes_to_read -= bytes_read;
@@ -130,22 +134,55 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
 
             // Восстановление временных меток
             struct utimbuf new_times;
-            new_times.actime = metadata.atime;  
+            new_times.actime = metadata.atime;
             new_times.modtime = metadata.mtime;
             utime(file_name, &new_times);
 
             close(output_fd);
-            close(archive_fd);
-            return 0;
+            file_found = 1;
         } else {
-            lseek(archive_fd, metadata.filesize, SEEK_CUR);
+            // Копируем метаданные и данные для всех других файлов
+            if (write(temp_fd, &metadata, sizeof(metadata)) != sizeof(metadata)) {
+                perror("Error writing metadata to temp archive");
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
+            }
+
+            // Копирование данных файла
+            char buffer[1024];
+            ssize_t bytes_to_read = metadata.filesize;
+            ssize_t bytes_read;
+            while (bytes_to_read > 0 && (bytes_read = read(archive_fd, buffer, sizeof(buffer))) > 0) {
+                if (write(temp_fd, buffer, bytes_read) != bytes_read) {
+                    perror("Error writing file data to temp archive");
+                    close(archive_fd);
+                    close(temp_fd);
+                    return -1;
+                }
+                bytes_to_read -= bytes_read;
+            }
         }
     }
 
-    fprintf(stderr, "File not found in archive\n");
     close(archive_fd);
-    return -1;
+    close(temp_fd);
+
+    if (!file_found) {
+        fprintf(stderr, "File not found in archive\n");
+        remove("temp_archive");
+        return -1;
+    }
+
+    // Заменяем старый архив новым
+    if (rename("temp_archive", archive_name) == -1) {
+        perror("Error renaming temp archive");
+        return -1;
+    }
+
+    return 0;
 }
+
 
 
 // Показать содержимое архива
