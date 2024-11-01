@@ -17,7 +17,6 @@ typedef struct {
     mode_t mode;
     time_t atime;
     time_t mtime;
-    int is_deleted;
 } FileMetadata;
 
 // Вывод справки
