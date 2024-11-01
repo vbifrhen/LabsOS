@@ -118,11 +118,11 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
 
             // Чтение и запись содержимого файла
             char buffer[1024];
-            ssize_t bytes_to_read = metadata.filesize; // Общее количество байт для чтения
+            ssize_t bytes_to_read = metadata.filesize;
             ssize_t bytes_read;
 
             while (bytes_to_read > 0) {
-                bytes_read = read(archive_fd, buffer, sizeof(buffer)); // Чтение из архива
+                bytes_read = read(archive_fd, buffer, sizeof(buffer));
                 if (bytes_read < 0) {
                     perror("Error reading from archive");
                     close(output_fd);
@@ -130,11 +130,8 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
                     close(temp_fd);
                     return -1;
                 }
-                if (bytes_read == 0) {
-                    // Конец файла архива
-                    break;
-                }
-                // Запись считанных байтов в выходной файл
+                if (bytes_read == 0) break;
+
                 if (write(output_fd, buffer, bytes_read) != bytes_read) {
                     perror("Error writing to extracted file");
                     close(output_fd);
@@ -142,7 +139,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
                     close(temp_fd);
                     return -1;
                 }
-                bytes_to_read -= bytes_read; // Уменьшаем количество байтов, которые нужно прочитать
+                bytes_to_read -= bytes_read;
             }
 
             // Восстановление временных меток
@@ -154,7 +151,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
             close(output_fd);
             file_found = 1;
         } else {
-            // Копируем метаданные и данные для всех других файлов
+            // Копируем метаданные и данные других файлов в новый архив
             if (write(temp_fd, &metadata, sizeof(metadata)) != sizeof(metadata)) {
                 perror("Error writing metadata to temp archive");
                 close(archive_fd);
@@ -164,29 +161,26 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
 
             // Копирование данных файла
             char buffer[1024];
-            ssize_t bytes_to_read = metadata.filesize; // Размер файла, который нужно прочитать
+            ssize_t bytes_to_read = metadata.filesize;
             ssize_t bytes_read;
 
             while (bytes_to_read > 0) {
-                bytes_read = read(archive_fd, buffer, sizeof(buffer)); // Чтение из архива
+                bytes_read = read(archive_fd, buffer, sizeof(buffer));
                 if (bytes_read < 0) {
                     perror("Error reading from archive");
                     close(archive_fd);
                     close(temp_fd);
                     return -1;
                 }
-                if (bytes_read == 0) {
-                    // Конец файла архива
-                    break;
-                }
-                // Запись считанных байтов в временный архив
+                if (bytes_read == 0) break;
+
                 if (write(temp_fd, buffer, bytes_read) != bytes_read) {
                     perror("Error writing file data to temp archive");
                     close(archive_fd);
                     close(temp_fd);
                     return -1;
                 }
-                bytes_to_read -= bytes_read; // Уменьшаем количество байтов, которые нужно прочитать
+                bytes_to_read -= bytes_read;
             }
         }
     }
@@ -208,6 +202,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
 
     return 0;
 }
+
 
 
 
