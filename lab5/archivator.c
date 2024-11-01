@@ -93,6 +93,7 @@ int add_file_to_archive(const char *archive_name, const char *file_path) {
 
 
 // Извлечение файла из архива
+
 int extract_file_from_archive(const char *archive_name, const char *file_name) {
     int archive_fd = open(archive_name, O_RDONLY);
     if (archive_fd == -1) {
@@ -100,13 +101,20 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
         return -1;
     }
 
+    int temp_fd = open("temp_archive", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (temp_fd == -1) {
+        perror("Error creating temporary archive");
+        close(archive_fd);
+        return -1;
+    }
+
     FileMetadata metadata;
     int file_found = 0;
 
-    // Проход по файлам в архиве, чтение метаданных каждого файла
+    // Проход по файлам в архиве
     while (read(archive_fd, &metadata, sizeof(metadata)) == sizeof(metadata)) {
         if (strcmp(metadata.filename, file_name) == 0) {
-            // Если нашли нужный файл
+            // Если найден файл для извлечения
             file_found = 1;
 
             // Создаем новый файл с извлекаемыми данными
@@ -114,6 +122,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
             if (output_fd == -1) {
                 perror("Error creating extracted file");
                 close(archive_fd);
+                close(temp_fd);
                 return -1;
             }
 
@@ -128,12 +137,14 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
                     perror("Error reading from archive");
                     close(output_fd);
                     close(archive_fd);
+                    close(temp_fd);
                     return -1;
                 }
                 if (write(output_fd, buffer, bytes_read) != bytes_read) {
                     perror("Error writing to extracted file");
                     close(output_fd);
                     close(archive_fd);
+                    close(temp_fd);
                     return -1;
                 }
                 bytes_to_read -= bytes_read;
@@ -146,21 +157,51 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
             utime(file_name, &new_times);
 
             close(output_fd);
-            break; // Файл найден и извлечен, выходим из цикла
         } else {
-            // Пропускаем данные файла, чтобы перейти к следующему файлу в архиве
-            if (lseek(archive_fd, metadata.filesize, SEEK_CUR) == -1) {
-                perror("Error seeking to next file in archive");
+            // Копируем метаданные и данные других файлов в новый архив
+            if (write(temp_fd, &metadata, sizeof(metadata)) != sizeof(metadata)) {
+                perror("Error writing metadata to temp archive");
                 close(archive_fd);
+                close(temp_fd);
                 return -1;
+            }
+
+            // Копирование данных файла
+            char buffer[1024];
+            ssize_t bytes_to_read = metadata.filesize;
+            ssize_t bytes_read;
+
+            while (bytes_to_read > 0) {
+                bytes_read = read(archive_fd, buffer, sizeof(buffer));
+                if (bytes_read <= 0) {
+                    perror("Error reading from archive");
+                    close(archive_fd);
+                    close(temp_fd);
+                    return -1;
+                }
+                if (write(temp_fd, buffer, bytes_read) != bytes_read) {
+                    perror("Error writing file data to temp archive");
+                    close(archive_fd);
+                    close(temp_fd);
+                    return -1;
+                }
+                bytes_to_read -= bytes_read;
             }
         }
     }
 
     close(archive_fd);
+    close(temp_fd);
 
     if (!file_found) {
         fprintf(stderr, "File not found in archive\n");
+        remove("temp_archive");
+        return -1;
+    }
+
+    // Заменяем старый архив новым
+    if (rename("temp_archive", archive_name) == -1) {
+        perror("Error renaming temp archive");
         return -1;
     }
 
