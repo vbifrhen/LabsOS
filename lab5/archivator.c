@@ -93,7 +93,6 @@ int add_file_to_archive(const char *archive_name, const char *file_path) {
 
 
 // Извлечение файла из архива
-
 int extract_file_from_archive(const char *archive_name, const char *file_name) {
     int archive_fd = open(archive_name, O_RDONLY);
     if (archive_fd == -1) {
@@ -127,27 +126,32 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
             }
 
             // Чтение содержимого файла из архива и запись в новый файл
-            char buffer[1024];
-            ssize_t bytes_to_read = metadata.filesize;
-            ssize_t bytes_read;
+            char *buffer = malloc(metadata.filesize);  // Выделяем память под размер файла
+            if (!buffer) {
+                perror("Error allocating memory");
+                close(output_fd);
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
+            }
 
-            while (bytes_to_read > 0) {
-                bytes_read = read(archive_fd, buffer, sizeof(buffer));
-                if (bytes_read <= 0) {
-                    perror("Error reading from archive");
-                    close(output_fd);
-                    close(archive_fd);
-                    close(temp_fd);
-                    return -1;
-                }
-                if (write(output_fd, buffer, bytes_read) != bytes_read) {
-                    perror("Error writing to extracted file");
-                    close(output_fd);
-                    close(archive_fd);
-                    close(temp_fd);
-                    return -1;
-                }
-                bytes_to_read -= bytes_read;
+            ssize_t bytes_read = read(archive_fd, buffer, metadata.filesize);
+            if (bytes_read < 0) {
+                perror("Error reading from archive");
+                free(buffer);
+                close(output_fd);
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
+            }
+
+            if (write(output_fd, buffer, bytes_read) != bytes_read) {
+                perror("Error writing to extracted file");
+                free(buffer);
+                close(output_fd);
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
             }
 
             // Восстановление временных меток
@@ -156,6 +160,7 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
             new_times.modtime = metadata.mtime;
             utime(file_name, &new_times);
 
+            free(buffer);
             close(output_fd);
         } else {
             // Копируем метаданные и данные других файлов в новый архив
@@ -167,26 +172,32 @@ int extract_file_from_archive(const char *archive_name, const char *file_name) {
             }
 
             // Копирование данных файла
-            char buffer[1024];
-            ssize_t bytes_to_read = metadata.filesize;
-            ssize_t bytes_read;
-
-            while (bytes_to_read > 0) {
-                bytes_read = read(archive_fd, buffer, sizeof(buffer));
-                if (bytes_read <= 0) {
-                    perror("Error reading from archive");
-                    close(archive_fd);
-                    close(temp_fd);
-                    return -1;
-                }
-                if (write(temp_fd, buffer, bytes_read) != bytes_read) {
-                    perror("Error writing file data to temp archive");
-                    close(archive_fd);
-                    close(temp_fd);
-                    return -1;
-                }
-                bytes_to_read -= bytes_read;
+            char *buffer = malloc(metadata.filesize);  // Выделяем память под размер файла
+            if (!buffer) {
+                perror("Error allocating memory for file data");
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
             }
+
+            ssize_t bytes_read = read(archive_fd, buffer, metadata.filesize);
+            if (bytes_read < 0) {
+                perror("Error reading from archive");
+                free(buffer);
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
+            }
+
+            if (write(temp_fd, buffer, bytes_read) != bytes_read) {
+                perror("Error writing file data to temp archive");
+                free(buffer);
+                close(archive_fd);
+                close(temp_fd);
+                return -1;
+            }
+
+            free(buffer);
         }
     }
 
