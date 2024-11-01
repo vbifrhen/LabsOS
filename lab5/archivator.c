@@ -7,6 +7,7 @@
 #include <time.h>
 #include <errno.h>
 #include <utime.h>
+#include <libgen.h> 
 
 #define MAX_FILENAME 256
 
@@ -29,61 +30,67 @@ void print_help() {
 }
 
 // Добавление файла в архив
-int add_file_to_archive(const char *archive_name, const char *file_name) {
+int add_file_to_archive(const char *archive_name, const char *file_path) {
     int archive_fd = open(archive_name, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (archive_fd == -1) {
         perror("Error opening archive");
         return -1;
     }
 
-    int file_fd = open(file_name, O_RDONLY);
-    if (file_fd == -1) {
-        perror("Error opening file to add");
+    int input_fd = open(file_path, O_RDONLY);
+    if (input_fd == -1) {
+        perror("Error opening input file");
         close(archive_fd);
         return -1;
     }
 
     struct stat file_stat;
-    if (fstat(file_fd, &file_stat) == -1) {
-        perror("Error getting file stats");
-        close(file_fd);
+    if (fstat(input_fd, &file_stat) == -1) {
+        perror("Error getting file metadata");
+        close(input_fd);
         close(archive_fd);
         return -1;
     }
 
+    // Получаем только имя файла из пути
+    const char *file_name = basename((char *)file_path);
+
     FileMetadata metadata;
-    strncpy(metadata.filename, file_name, MAX_FILENAME);
+    strncpy(metadata.filename, file_name, sizeof(metadata.filename) - 1);
+    metadata.filename[sizeof(metadata.filename) - 1] = '\0'; // Страхуемся от переполнения
     metadata.filesize = file_stat.st_size;
     metadata.mode = file_stat.st_mode;
     metadata.atime = file_stat.st_atime;
     metadata.mtime = file_stat.st_mtime;
 
     if (write(archive_fd, &metadata, sizeof(metadata)) != sizeof(metadata)) {
-        perror("Error writing metadata");
-        close(file_fd);
+        perror("Error writing metadata to archive");
+        close(input_fd);
         close(archive_fd);
         return -1;
     }
 
+    // Записываем содержимое файла
     char buffer[1024];
     ssize_t bytes_read;
-    while ((bytes_read = read(file_fd, buffer, sizeof(buffer))) > 0) {
+    while ((bytes_read = read(input_fd, buffer, sizeof(buffer))) > 0) {
         if (write(archive_fd, buffer, bytes_read) != bytes_read) {
             perror("Error writing file data to archive");
-            close(file_fd);
+            close(input_fd);
             close(archive_fd);
             return -1;
         }
     }
 
     if (bytes_read == -1) {
-        perror("Error reading file");
+        perror("Error reading input file");
     }
 
-    close(file_fd);
+    close(input_fd);
     close(archive_fd);
     return 0;
 }
+
 
 // Извлечение файла из архива
 int extract_file_from_archive(const char *archive_name, const char *file_name) {
