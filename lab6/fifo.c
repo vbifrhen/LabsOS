@@ -28,7 +28,6 @@ int main() {
     }
 
     case 0: {  // Дочерний процесс
-        sleep(5); // Задержка для разницы во времени
 
         // Получение текущего времени
         time_t now = time(NULL);
@@ -55,12 +54,6 @@ int main() {
     }
 
     default: {  // Родительский процесс
-        // Получение текущего времени
-        time_t now = time(NULL);
-        tm_info = localtime(&now);
-
-        sprintf(buf, "Родительский процесс: Время: %s\nPID: %d\n", asctime(tm_info), getpid());
-
         // Открытие FIFO на запись
         int fd = open(FIFO_NAME, O_WRONLY);
         if (fd == -1) {
@@ -68,6 +61,14 @@ int main() {
             unlink(FIFO_NAME);  // Удаляем FIFO
             exit(EXIT_FAILURE);
         }
+        sleep(5); // Задержка для разницы во времени
+        // Получение текущего времени
+        time_t now = time(NULL);
+        tm_info = localtime(&now);
+
+        sprintf(buf, "Родительский процесс: Время: %s\nPID: %d\n", asctime(tm_info), getpid());
+
+
 
         // Запись данных в FIFO
         write(fd, buf, strlen(buf));
