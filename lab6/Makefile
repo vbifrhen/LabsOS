@@ -4,17 +4,17 @@ CFLAGS=-Wall -Werror -Wextra
 # Default target
 all: rebuild
 
-my_cat:
-	$(CC) $(CFLAGS) cat.c -o my_cat 
+my_pipe:
+	$(CC) $(CFLAGS) pipe.c -o my_pipe 
 
-my_grep:
-	$(CC) $(CFLAGS) grep.c -o my_grep 
+my_fifo:
+	$(CC) $(CFLAGS) fifo.c -o my_fifo 
 	
 # Clean target
 clean:
-	rm -f my_cat my_grep
+	rm -f my_pipe my_fifo
 
 # Rebuild target
-rebuild: clean my_cat my_grep
+rebuild: clean my_pipe my_fifo
 
-.PHONY: clean all my_cat my_grep
+.PHONY: clean all my_pipe my_fifo
