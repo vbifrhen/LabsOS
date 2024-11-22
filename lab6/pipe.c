@@ -6,13 +6,11 @@
 
 int main() {
     int pipefd[2];
-    pid_t pid;
     char buf[1024];
+    pid_t pid;
     time_t now = time(NULL);
     struct tm *tm_info = localtime(&now);
-    char local_time[64];
-    strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
-    printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
+    printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), asctime(tm_info));
 
     // Создание pipe
     if (pipe(pipefd) == -1) {
@@ -21,32 +19,39 @@ int main() {
     }
 
     pid = fork();  // Создаем дочерний процесс
-
-    if (pid == -1) {
+    switch(pid) {
+    case -1:{
         perror("fork");
         exit(EXIT_FAILURE);
     }
 
-    if (pid == 0) {  // Дочерний процесс
-        // Задержка, чтобы время отличалось на хотя бы 5 секунд
-        sleep(5);
-
-        // Чтение данных из pipe
-        read(pipefd[0], buf, sizeof(buf));
+    case 0:{  // Дочерний процесс
         tm_info = localtime(&now);
         char local_time[64];
         strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
-        printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
-        printf("Received: %s\n", buf);
-
-        close(pipefd[0]);
+        printf("Дочерний процесс: Время: %s\n", asctime(tm_info));
         close(pipefd[1]);
-    } else {  // Родительский процесс
+        printf("Received: %s\n", buf);
+        // Чтение данных из pipe
+        int len = 0;
+        while (len = read(pipefd[0], buf, sizeof(buf)) != 0) {
+        read(2, buf, len);
+        }
+        close(pipefd[0]);
+        break;
+    } default: {  // Родительский процесс
+
+        sleep(5);
+        tm_info = localtime(&now);
+        char local_time[64];
+        strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
+        printf("Родительский процесс: Время: %s\n", asctime(tm_info));
+        close(pipefd[0]);
         // Пишем данные в pipe
         write(pipefd[1], buf, strlen(buf) + 1);
-        close(pipefd[0]);
         close(pipefd[1]);
+        break;
     }
-
+    }
     return 0;
 }
