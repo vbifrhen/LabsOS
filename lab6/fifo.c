@@ -6,61 +6,74 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define FIFO_NAME "/tmp/my_fifo"
+
 int main() {
-    const char *fifo_name = "/tmp/my_fifo";
     pid_t pid;
     char buf[1024];
-    time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    char local_time[64];
-    strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
-    printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
+    struct tm *tm_info;
 
-    // Создание FIFO
-    if (mkfifo(fifo_name, 0666) == -1) {
+    // Создание именованного канала (FIFO)
+    if (mkfifo(FIFO_NAME, 0666) == -1) {
         perror("mkfifo");
         exit(EXIT_FAILURE);
     }
 
     pid = fork();  // Создаем дочерний процесс
-
-    if (pid == -1) {
+    switch (pid) {
+    case -1: {
         perror("fork");
+        unlink(FIFO_NAME);  // Удаляем FIFO при ошибке
         exit(EXIT_FAILURE);
     }
 
-    if (pid == 0) {  // Дочерний процесс
-        // Задержка, чтобы время отличалось на хотя бы 5 секунд
-        sleep(5);
+    case 0: {  // Дочерний процесс
+        sleep(5); // Задержка для разницы во времени
 
-        // Открытие FIFO для чтения
-        int fd = open(fifo_name, O_RDONLY);
-        if (fd == -1) {
-            perror("open fifo");
-            exit(EXIT_FAILURE);
-        }
-        // Чтение данных из FIFO
-        read(fd, buf, sizeof(buf));
+        // Получение текущего времени
         time_t now = time(NULL);
-        struct tm *tm_info = localtime(&now);
-        char local_time[64];
-        strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
-        printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
-        printf("Received: %s\n", buf);
+        tm_info = localtime(&now);
+        printf("Дочерний процесс: Время: %s\n", asctime(tm_info));
 
-        close(fd);
-        unlink(fifo_name);  // Удаляем FIFO
-    } else {  // Родительский процесс
-        // Открытие FIFO для записи
-        int fd = open(fifo_name, O_WRONLY);
+        // Открытие FIFO на чтение
+        int fd = open(FIFO_NAME, O_RDONLY);
         if (fd == -1) {
-            perror("open fifo");
+            perror("open (child)");
+            unlink(FIFO_NAME);  // Удаляем FIFO
             exit(EXIT_FAILURE);
         }
 
-        // Пишем данные в FIFO
-        write(fd, buf, strlen(buf) + 1);
+        // Чтение данных из FIFO
+        int len = 0;
+        while ((len = read(fd, buf, sizeof(buf))) > 0) {
+            write(STDOUT_FILENO, buf, len);  // Выводим данные на экран
+        }
+
         close(fd);
+        unlink(FIFO_NAME);  // Удаляем FIFO
+        break;
+    }
+
+    default: {  // Родительский процесс
+        // Получение текущего времени
+        time_t now = time(NULL);
+        tm_info = localtime(&now);
+
+        sprintf(buf, "Родительский процесс: Время: %s\nPID: %d\n", asctime(tm_info), getpid());
+
+        // Открытие FIFO на запись
+        int fd = open(FIFO_NAME, O_WRONLY);
+        if (fd == -1) {
+            perror("open (parent)");
+            unlink(FIFO_NAME);  // Удаляем FIFO
+            exit(EXIT_FAILURE);
+        }
+
+        // Запись данных в FIFO
+        write(fd, buf, strlen(buf));
+        close(fd);
+        break;
+    }
     }
 
     return 0;
