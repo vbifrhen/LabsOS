@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/time.h>
+#include <time.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -10,9 +10,11 @@ int main() {
     const char *fifo_name = "/tmp/my_fifo";
     pid_t pid;
     char buf[1024];
-    struct timeval tv;
-    gettimeofday(&tv, NULL);  // Текущее время в секундах и микросекундах
-    snprintf(buf, sizeof(buf), "Time: %ld.%06ld, PID: %d", tv.tv_sec, tv.tv_usec, getpid());
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    char local_time[64];
+    strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
 
     // Создание FIFO
     if (mkfifo(fifo_name, 0666) == -1) {
@@ -37,11 +39,13 @@ int main() {
             perror("open fifo");
             exit(EXIT_FAILURE);
         }
-
         // Чтение данных из FIFO
         read(fd, buf, sizeof(buf));
-        gettimeofday(&tv, NULL);
-        printf("Child Process Time: %ld.%06ld\n", tv.tv_sec, tv.tv_usec);
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+        char local_time[64];
+        strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
+        printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
         printf("Received: %s\n", buf);
 
         close(fd);

@@ -1,16 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/time.h>
+#include <time.h>
 #include <string.h>
 
 int main() {
     int pipefd[2];
     pid_t pid;
     char buf[1024];
-    struct timeval tv;
-    gettimeofday(&tv, NULL);  // Текущее время в секундах и микросекундах
-    snprintf(buf, sizeof(buf), "Time: %ld.%06ld, PID: %d", tv.tv_sec, tv.tv_usec, getpid());
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    char local_time[64];
+    strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
 
     // Создание pipe
     if (pipe(pipefd) == -1) {
@@ -31,8 +33,10 @@ int main() {
 
         // Чтение данных из pipe
         read(pipefd[0], buf, sizeof(buf));
-        gettimeofday(&tv, NULL);
-        printf("Child Process Time: %ld.%06ld\n", tv.tv_sec, tv.tv_usec);
+        tm_info = localtime(&now);
+        char local_time[64];
+        strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
+        printf("Принимающий процесс: PID: %d, Время: %s\n", getpid(), local_time);
         printf("Received: %s\n", buf);
 
         close(pipefd[0]);
