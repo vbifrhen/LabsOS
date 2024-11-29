@@ -35,7 +35,7 @@ int main() {
     // Устанавливаем обработчики сигналов
     signal(SIGINT, cleanup);   // Ctrl+C
     signal(SIGTERM, cleanup);  // Команда kill
-    signal(SIGQUIT, cleanup);  // Ctrl+\
+    signal(SIGQUIT, cleanup);  // Ctrl+"\""
 
     // Генерация уникального ключа
     shm_key = ftok(FTOK_PATH, 'A');
@@ -50,6 +50,11 @@ int main() {
         perror("shmget");
         printf("Передающая программа уже запущена. Завершение.\n");
         exit(EXIT_FAILURE);
+    }
+
+    // Автоматическое удаление сегмента после отсоединения всех процессов
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
     }
 
     // Присоединяем разделяемую память
