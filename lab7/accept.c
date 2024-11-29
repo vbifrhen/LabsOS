@@ -50,9 +50,7 @@ int main() {
         struct tm *tm_info = localtime(&now);
         char *local_time = asctime(tm_info);
 
-        printf("Принимающий процесс: PID: %d, Время: %s", getpid(), local_time);
-        printf("Принято от PID: %d, Время: %s", data->pid, data->time_str);
-
+        printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s", getpid(), local_time, data->pid, data->time_str);
         sleep(1);
     }
 
