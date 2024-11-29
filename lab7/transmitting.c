@@ -6,6 +6,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
+#include <signal.h>
 
 #define SHM_SIZE 1024
 #define FTOK_PATH "/tmp"
@@ -15,10 +16,26 @@ typedef struct {
     char time_str[64];
 } shared_data;
 
+int shmid; // Глобальная переменная для хранения идентификатора разделяемой памяти
+
+void cleanup(int sig) {
+    // Удаляем сегмент разделяемой памяти
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
+    } else {
+        printf("Сегмент разделяемой памяти успешно удален. Завершение программы.\n");
+    }
+    exit(0);
+}
+
 int main() {
-    int shmid;
     key_t shm_key;
     shared_data *data;
+
+    // Устанавливаем обработчики сигналов
+    signal(SIGINT, cleanup);   // Ctrl+C
+    signal(SIGTERM, cleanup);  // Команда kill
+    signal(SIGQUIT, cleanup);  // Ctrl+\
 
     // Генерация уникального ключа
     shm_key = ftok(FTOK_PATH, 'A');
@@ -39,7 +56,7 @@ int main() {
     data = (shared_data *)shmat(shmid, NULL, 0);
     if (data == (void *)-1) {
         perror("shmat");
-        exit(EXIT_FAILURE);
+        cleanup(0); // Удаляем сегмент, если ошибка в `shmat`
     }
 
     printf("Передающая программа запущена. PID: %d, SHM_KEY: %d\n", getpid(), shm_key);
