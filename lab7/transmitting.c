@@ -18,7 +18,7 @@ typedef struct {
 
 int shmid; // Глобальная переменная для хранения идентификатора разделяемой памяти
 
-void cleanup(int sig) {
+void cleanup() {
     // Удаляем сегмент разделяемой памяти
     if (shmctl(shmid, IPC_RMID, NULL) == -1) {
         perror("shmctl");
@@ -35,7 +35,7 @@ int main() {
     // Устанавливаем обработчики сигналов
     signal(SIGINT, cleanup);   // Ctrl+C
     signal(SIGTERM, cleanup);  // Команда kill
-    signal(SIGQUIT, cleanup);  // Ctrl+\
+    signal(SIGQUIT, cleanup);  // Ctrl+"\"
 
     // Генерация уникального ключа
     shm_key = ftok(FTOK_PATH, 'A');
@@ -69,7 +69,7 @@ int main() {
         data->time_str[sizeof(data->time_str) - 1] = '\0'; // Удаляем лишние символы
         data->pid = getpid();
 
-        sleep(1);
+        sleep(3);
     }
 
     return 0;
