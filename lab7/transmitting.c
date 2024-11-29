@@ -9,7 +9,7 @@
 #include <signal.h>
 
 #define SHM_SIZE 1024
-#define FTOK_PATH "/tmp"
+#define FTOK_PATH "./"
 
 typedef struct {
     pid_t pid;
