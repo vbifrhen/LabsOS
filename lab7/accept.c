@@ -8,7 +8,7 @@
 #include <sys/types.h>
 
 #define SHM_SIZE 1024
-#define FTOK_PATH "./"
+#define FTOK_PATH "."
 
 typedef struct {
     pid_t pid;
@@ -47,9 +47,8 @@ int main() {
     // Бесконечный цикл чтения данных
     while (1) {
         time_t now = time(NULL);
-        struct tm *tm_info = localtime(&now);
-        char *local_time = asctime(tm_info);
-
+        char *local_time = strtok(asctime(localtime(&now)), "\n");
+        
         printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s", getpid(), local_time, data->pid, data->time_str);
         sleep(1);
     }
