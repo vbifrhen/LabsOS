@@ -1,4 +1,4 @@
-CC=gccmy_accept
+CC=gcc
 CFLAGS=-Wall -Werror -Wextra
 
 # Default target
