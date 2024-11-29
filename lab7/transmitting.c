@@ -7,8 +7,8 @@
 #include <sys/shm.h>
 #include <sys/types.h>
 
-#define SHM_KEY 0x1234
 #define SHM_SIZE 1024
+#define FTOK_PATH "/tmp"
 
 typedef struct {
     pid_t pid;
@@ -17,10 +17,18 @@ typedef struct {
 
 int main() {
     int shmid;
+    key_t shm_key;
     shared_data *data;
 
-    // Попытка создания разделяемой памяти
-    shmid = shmget(SHM_KEY, SHM_SIZE, IPC_CREAT | IPC_EXCL | 0666);
+    // Генерация уникального ключа
+    shm_key = ftok(FTOK_PATH, 'A');
+    if (shm_key == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
+    }
+
+    // Создание разделяемой памяти
+    shmid = shmget(shm_key, SHM_SIZE, IPC_CREAT | IPC_EXCL | 0666);
     if (shmid == -1) {
         perror("shmget");
         printf("Передающая программа уже запущена. Завершение.\n");
@@ -34,13 +42,14 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Передающая программа запущена. PID: %d\n", getpid());
+    printf("Передающая программа запущена. PID: %d, SHM_KEY: %d\n", getpid(), shm_key);
 
     // Бесконечный цикл передачи данных
     while (1) {
         time_t now = time(NULL);
         struct tm *tm_info = localtime(&now);
-        strftime(data->time_str, sizeof(data->time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+        strncpy(data->time_str, asctime(tm_info), sizeof(data->time_str) - 1);
+        data->time_str[sizeof(data->time_str) - 1] = '\0'; // Удаляем лишние символы
         data->pid = getpid();
 
         sleep(1);

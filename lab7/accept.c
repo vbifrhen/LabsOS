@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #define SHM_SIZE 1024
+#define FTOK_PATH "/tmp"
 
 typedef struct {
     pid_t pid;
@@ -16,10 +17,18 @@ typedef struct {
 
 int main() {
     int shmid;
+    key_t shm_key;
     shared_data *data;
-    
+
+    // Генерация уникального ключа
+    shm_key = ftok(FTOK_PATH, 'A');
+    if (shm_key == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
+    }
+
     // Подключаемся к существующему сегменту разделяемой памяти
-    shmid = shmget(SHM_KEY, SHM_SIZE, 0666);
+    shmid = shmget(shm_key, SHM_SIZE, 0666);
     if (shmid == -1) {
         perror("shmget");
         printf("Ошибка: разделяемая память не создана.\n");
@@ -33,18 +42,16 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Принимающая программа запущена. PID: %d\n", getpid());
+    printf("Принимающая программа запущена. PID: %d, SHM_KEY: %d\n", getpid(), shm_key);
 
     // Бесконечный цикл чтения данных
     while (1) {
-        sleep(3);
         time_t now = time(NULL);
         struct tm *tm_info = localtime(&now);
-        char local_time[64];
-        strftime(local_time, sizeof(local_time), "%Y-%m-%d %H:%M:%S", tm_info);
+        char *local_time = asctime(tm_info);
 
-        printf("Принимающий процесс: PID: %d, Время: %s ", getpid(), local_time);
-        printf("Принято от PID: %d, Время: %s\n", data->pid, data->time_str);
+        printf("Принимающий процесс: PID: %d, Время: %s", getpid(), local_time);
+        printf("Принято от PID: %d, Время: %s", data->pid, data->time_str);
 
         sleep(1);
     }
