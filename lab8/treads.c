@@ -2,50 +2,67 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
 
 #define NUM_READERS 10
-#define NUM_WRITERS 1
-#define ARRAY_SIZE 50
+#define ARRAY_SIZE 100
 
 // Общий массив для записи и чтения
 char shared_array[ARRAY_SIZE];
+int write_index = 0;
 
-// Мьютекс для синхронизации доступа к массиву
+// Мьютекс и условные переменные
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+int current_reader = 0;
 
 // Функция для пишущего потока
-void* writer_thread() {
-    for (int i = 0; i < ARRAY_SIZE; i++) {
-        pthread_mutex_lock(&mutex); // Захватываем мьютекс
+void* writer_thread(void* arg) {
+    for (int i = 1; i <= ARRAY_SIZE; i++) {
+        pthread_mutex_lock(&mutex);
 
-        // Записываем в массив номер записи
-        sprintf(shared_array + i, "%d", i + 1);
+        // Записываем число полностью в массив
+        int written = snprintf(shared_array + write_index, ARRAY_SIZE - write_index, "%d ", i);
+        if (written < 0 || write_index + written >= ARRAY_SIZE) {
+            printf("Writer: недостаточно места в массиве\n");
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
 
-        printf("Writer: записал %d в индекс %d\n", i + 1, i);
+        printf("Writer: записал %d в массив (индекс %d)\n", i, write_index);
+        write_index += written;
 
-        pthread_mutex_unlock(&mutex); // Освобождаем мьютекс
-
-        sleep(1); // Задержка для имитации работы
+        pthread_mutex_unlock(&mutex);
+        usleep(100000); // Задержка для имитации работы
     }
+
     return NULL;
 }
 
 // Функция для читающих потоков
 void* reader_thread(void* arg) {
     long tid = (long)arg;
+
     while (1) {
-        pthread_mutex_lock(&mutex); // Захватываем мьютекс
+        pthread_mutex_lock(&mutex);
 
-        printf("Reader %ld: ", tid);
-        for (int i = 0; i < ARRAY_SIZE; i++) {
-            printf("%c ", shared_array[i] ? shared_array[i] : '.');
+        // Ждем своей очереди
+        while (current_reader != tid) {
+            pthread_cond_wait(&cond, &mutex);
         }
-        printf("\n");
 
-        pthread_mutex_unlock(&mutex); // Освобождаем мьютекс
+        // Выводим содержимое массива
+        printf("Reader %ld: %s\n", tid, shared_array);
 
-        sleep(1); // Задержка для имитации работы
+        // Переходим к следующему читателю
+        current_reader = (current_reader + 1) % NUM_READERS;
+        pthread_cond_broadcast(&cond);
+
+        pthread_mutex_unlock(&mutex);
+
+        usleep(100000); // Задержка для имитации работы
     }
+
     return NULL;
 }
 
@@ -61,13 +78,18 @@ int main() {
         pthread_create(&readers[i], NULL, reader_thread, (void*)i);
     }
 
-    // Ожидаем завершения работы всех потоков
+    // Ожидаем завершения работы пишущего потока
     pthread_join(writer, NULL);
+
+    // Завершаем чтение (неблокируемо, просто прерываем потоки)
     for (int i = 0; i < NUM_READERS; i++) {
+        pthread_cancel(readers[i]);
         pthread_join(readers[i], NULL);
     }
 
     // Завершаем работу
     pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
+
     return 0;
 }
