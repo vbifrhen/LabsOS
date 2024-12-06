@@ -17,7 +17,7 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int current_reader = 0;
 
 // Функция для пишущего потока
-void* writer_thread(void* arg) {
+void* writer_thread() {
     for (int i = 1; i <= ARRAY_SIZE; i++) {
         pthread_mutex_lock(&mutex);
 
@@ -33,7 +33,7 @@ void* writer_thread(void* arg) {
         write_index += written;
 
         pthread_mutex_unlock(&mutex);
-        sleep(2);
+        sleep(1);
     }
 
     return NULL;
