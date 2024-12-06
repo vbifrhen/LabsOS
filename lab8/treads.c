@@ -14,7 +14,7 @@ char shared_array[ARRAY_SIZE];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Функция для пишущего потока
-void* writer_thread(void* arg) {
+void* writer_thread() {
     for (int i = 0; i < ARRAY_SIZE; i++) {
         pthread_mutex_lock(&mutex); // Захватываем мьютекс
 
@@ -25,7 +25,7 @@ void* writer_thread(void* arg) {
 
         pthread_mutex_unlock(&mutex); // Освобождаем мьютекс
 
-        usleep(100000); // Задержка для имитации работы
+        sleep(1); // Задержка для имитации работы
     }
     return NULL;
 }
@@ -44,7 +44,7 @@ void* reader_thread(void* arg) {
 
         pthread_mutex_unlock(&mutex); // Освобождаем мьютекс
 
-        usleep(100000); // Задержка для имитации работы
+        sleep(1); // Задержка для имитации работы
     }
     return NULL;
 }
