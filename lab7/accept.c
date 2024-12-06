@@ -53,5 +53,11 @@ int main() {
         sleep(1);
     }
 
+    if (shmdt(shared_memory) == -1) {
+        perror("shmdt failed");
+    } else {
+        printf("Принимающая программа: сегмент памяти успешно отсоединён.\n");
+    }
+
     return 0;
 }
