@@ -52,16 +52,11 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Автоматическое удаление сегмента после отсоединения всех процессов
-    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
-        perror("shmctl");
-    }
-
     // Присоединяем разделяемую память
     data = (shared_data *)shmat(shmid, NULL, 0);
     if (data == (void *)-1) {
         perror("shmat");
-        cleanup(0); // Удаляем сегмент, если ошибка в `shmat`
+        cleanup(); // Удаляем сегмент, если ошибка в `shmat`
     }
 
     printf("Передающая программа запущена. PID: %d, SHM_KEY: %d\n", getpid(), shm_key);
