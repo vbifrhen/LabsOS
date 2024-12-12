@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define NUM_READERS 10
-#define ARRAY_SIZE 100
+#define ARRAY_SIZE 20
 
 // Общий массив для записи и чтения
 char shared_array[ARRAY_SIZE];
@@ -33,7 +33,7 @@ void* writer_thread(void* arg) {
         write_index += written;
 
         pthread_mutex_unlock(&mutex);
-        usleep(100000); // Задержка для имитации работы
+        sleep(2);
     }
 
     return NULL;
@@ -60,7 +60,7 @@ void* reader_thread(void* arg) {
 
         pthread_mutex_unlock(&mutex);
 
-        usleep(100000); // Задержка для имитации работы
+        sleep(1);
     }
 
     return NULL;
