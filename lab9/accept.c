@@ -1,50 +1,75 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/ipc.h>
-#include <sys/shm.h>
 #include <sys/sem.h>
 #include <sys/types.h>
+#include <signal.h>
 
-#define SHM_KEY 0x1234
-#define SEM_KEY 0x5678
-#define MAX_LEN 256
+#define FTOK_PATH "."
 
-struct shared_data {
-    char message[MAX_LEN];
-    pid_t sender_pid;
-};
+int semid; // Глобальная переменная для идентификатора семафора
 
-// Semaphore operations
-void sem_lock(int sem_id) {
+// Операции над семафором
+void sem_lock(int semid) {
     struct sembuf sb = {0, -1, 0};
-    semop(sem_id, &sb, 1);
+    if (semop(semid, &sb, 1) == -1) {
+        perror("semop lock failed");
+        exit(EXIT_FAILURE);
+    }
 }
 
-void sem_unlock(int sem_id) {
+void sem_unlock(int semid) {
     struct sembuf sb = {0, 1, 0};
-    semop(sem_id, &sb, 1);
+    if (semop(semid, &sb, 1) == -1) {
+        perror("semop unlock failed");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void cleanup() {
+    printf("Принимающая программа завершена. PID: %d\n", getpid());
+    exit(0);
 }
 
 int main() {
-    int sem_id = semget(SEM_KEY, 1, 0666);
-    if (sem_id == -1) {
-        perror("Failed to access semaphore");
-        exit(1);
+    key_t sem_key;
+
+    // Устанавливаем обработчики сигналов
+    signal(SIGINT, cleanup);   // Ctrl+C
+    signal(SIGTERM, cleanup);  // Команда kill
+    signal(SIGQUIT, cleanup);  // Ctrl+"\""
+
+    // Генерация уникального ключа для семафора
+    sem_key = ftok(FTOK_PATH, 'A');
+    if (sem_key == -1) {
+        perror("Ошибка генерации ключа ftok для семафора");
+        exit(EXIT_FAILURE);
     }
 
-    printf("Receiver started. PID: %d\\n", getpid());
+    // Получение идентификатора семафора
+    semid = semget(sem_key, 1, 0666);
+    if (semid == -1) {
+        perror("semget failed");
+        exit(EXIT_FAILURE);
+    }
 
+    printf("Принимающая программа запущена. PID: %d\n", getpid());
+
+    // Основной цикл приёма данных
     while (1) {
-        sem_lock(sem_id);
+        sem_lock(semid);
 
+        // Текущее время принимающей программы
         time_t now = time(NULL);
         char *local_time = strtok(asctime(localtime(&now)), "\n");
-        printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s", getpid(), local_time, data->pid, data->time_str);
 
-        sem_unlock(sem_id);
-        sleep(1);
+        printf("Принято: Текущее время приёмника: %s (PID: %d)\n", local_time, getpid());
+
+        sem_unlock(semid);
+        sleep(1); // Ожидание для имитации обработки
     }
 
     return 0;

@@ -10,11 +10,6 @@
 
 #define FTOK_PATH "."
 
-typedef struct {
-    pid_t pid;
-    char time_str[64];
-} shared_data;
-
 int semid; // Глобальная переменная для идентификатора семафора
 
 // Операции над семафором
@@ -39,7 +34,7 @@ void cleanup() {
     if (semctl(semid, 0, IPC_RMID) == -1) {
         perror("semctl IPC_RMID failed");
     } else {
-        printf("Передающая программа: семафор удалён.\n");
+        printf("Семафор успешно удален. Завершение программы.\n");
     }
 
     exit(0);
@@ -60,12 +55,11 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-
     // Создание семафора
     semid = semget(sem_key, 1, IPC_CREAT | IPC_EXCL | 0666);
     if (semid == -1) {
         perror("semget");
-        semctl(semid, IPC_RMID, NULL);
+        fprintf(stderr, "Ошибка: передающая программа уже запущена.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -84,8 +78,7 @@ int main() {
 
         time_t now = time(NULL);
         char *local_time = strtok(asctime(localtime(&now)), "\n");
-
-        printf("Передано: %s (PID: %d)\n", data->time_str, data->pid);
+        printf("Передано: %s (PID: %d)\n", local_time, getpid());
 
         sem_unlock(semid);
         sleep(3);
