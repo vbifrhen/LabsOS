@@ -65,14 +65,13 @@ int main() {
     semid = semget(sem_key, 1, IPC_CREAT | IPC_EXCL | 0666);
     if (semid == -1) {
         perror("semget");
-        shmctl(shmid, IPC_RMID, NULL);
+        semctl(semid, IPC_RMID, NULL);
         exit(EXIT_FAILURE);
     }
 
     // Инициализация семафора значением 1
     if (semctl(semid, 0, SETVAL, 1) == -1) {
         perror("semctl SETVAL failed");
-        shmctl(shmid, IPC_RMID, NULL);
         semctl(semid, 0, IPC_RMID);
         exit(EXIT_FAILURE);
     }
@@ -84,10 +83,7 @@ int main() {
         sem_lock(semid);
 
         time_t now = time(NULL);
-        struct tm *tm_info = localtime(&now);
-        strncpy(data->time_str, asctime(tm_info), sizeof(data->time_str) - 1);
-        data->time_str[sizeof(data->time_str) - 1] = '\0';
-        data->pid = getpid();
+        char *local_time = strtok(asctime(localtime(&now)), "\n");
 
         printf("Передано: %s (PID: %d)\n", data->time_str, data->pid);
 

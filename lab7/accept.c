@@ -6,6 +6,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
+#include <signal.h>
 
 #define SHM_SIZE 1024
 #define FTOK_PATH "."
@@ -15,10 +16,28 @@ typedef struct {
     char time_str[64];
 } shared_data;
 
+shared_data *data;
+
+void cleanup() {
+    // Удаляем сегмент разделяемой памяти
+    if (shmdt(data) == -1) {
+        perror("shmdt failed");
+    } else {
+        printf("\nПринимающая программа: сегмент памяти успешно отсоединён.\n");
+    }
+    exit(0);
+}
+
+
 int main() {
     int shmid;
     key_t shm_key;
-    shared_data *data;
+
+
+    // Устанавливаем обработчики сигналов
+    signal(SIGINT, cleanup);   // Ctrl+C
+    signal(SIGTERM, cleanup);  // Команда kill
+    signal(SIGQUIT, cleanup);  // Ctrl+"\""
 
     // Генерация уникального ключа
     shm_key = ftok(FTOK_PATH, 'A');
@@ -53,11 +72,6 @@ int main() {
         sleep(1);
     }
 
-    if (shmdt(data) == -1) {
-        perror("shmdt failed");
-    } else {
-        printf("Принимающая программа: сегмент памяти успешно отсоединён.\n");
-    }
 
     return 0;
 }
