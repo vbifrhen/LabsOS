@@ -10,7 +10,10 @@
 #define MAX_STR_SIZE 64
 
 int semid; // Глобальная переменная для идентификатора семафора
-char shared_data[MAX_STR_SIZE]; // Разделяемая строка для данных
+typedef struct {
+    pid_t pid;
+    char time_str[MAX_STR_SIZE];
+} shared_data;
 
 // Операции над семафором
 void sem_lock(int semid) {
@@ -65,10 +68,9 @@ int main() {
 
         // Имитация чтения данных из разделяемого ресурса
         time_t now = time(NULL);
-        struct tm *tm_info = localtime(&now);
-        snprintf(shared_data, sizeof(shared_data), asctime(tm_info), getpid());
-
-        printf("Принято: %s\n", shared_data);
+        char *local_time = strtok(asctime(localtime(&now)), "\n");
+        
+        printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s", getpid(), local_time, data->pid, data->time_str);
 
         sem_unlock(semid);
         sleep(1);
