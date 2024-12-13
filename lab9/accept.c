@@ -91,7 +91,7 @@ int main() {
         time_t now = time(NULL);
         char *local_time = strtok(asctime(localtime(&now)), "\n");
         
-        printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s", getpid(), local_time, data->pid, data->time_str);
+        printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s\n", getpid(), local_time, data->pid, data->time_str);
 
         sem_unlock(semid);
         sleep(1);
