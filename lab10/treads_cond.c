@@ -29,15 +29,16 @@ void* writer_thread() {
 
         printf("Writer: записал %d в массив (индекс %d)\n", i, write_index);
         write_index += written;
-        data_available = 1;
+        data_available = 1; //Флаг данных
 
         pthread_cond_broadcast(&condvar);
         pthread_mutex_unlock(&mutex);
         sleep(1);
     }
-
+    //Когда кончилось место освобождаем Readers
     pthread_mutex_lock(&mutex);
     stop_readers = 1;
+    // Уведомляем читающие потоки
     pthread_cond_broadcast(&condvar);
     pthread_mutex_unlock(&mutex);
 
@@ -49,7 +50,7 @@ void* reader_thread(void* arg) {
 
     while (1) {
         pthread_mutex_lock(&mutex);
-
+        //Проверка по пишущему потоку
         while (!data_available && !stop_readers) {
             pthread_cond_wait(&condvar, &mutex);
         }
