@@ -40,9 +40,8 @@ int main() {
         sem_lock(sem_id);
 
         time_t now = time(NULL);
-        struct tm *t = localtime(&now);
-        printf("Receiver PID: %d, Current time: %02d:%02d:%02d, Received: %s (from PID: %d)\\n",
-               getpid(), t->tm_hour, t->tm_min, t->tm_sec, data->message, data->sender_pid);
+        char *local_time = strtok(asctime(localtime(&now)), "\n");
+        printf("Принимающий процесс: PID: %d, Время: %s | Принято от PID: %d, Время: %s", getpid(), local_time, data->pid, data->time_str);
 
         sem_unlock(sem_id);
         sleep(1);
