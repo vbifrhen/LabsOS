@@ -4,14 +4,14 @@ CFLAGS=-Wall -Werror -Wextra -lpthread
 # Default target
 all: rebuild
 
-my_treads:
-	$(CC) $(CFLAGS) treads.c -o my_treads
+my_treads_rw:
+	$(CC) $(CFLAGS) treads_rw.c -o my_treads_rw
 	
 # Clean target
 clean:
-	rm -f my_treads
+	rm -f my_treads_rw
 
 # Rebuild target
-rebuild: clean my_treads
+rebuild: clean my_treads_rw
 
-.PHONY: clean all my_treads
+.PHONY: clean all my_treads_rw

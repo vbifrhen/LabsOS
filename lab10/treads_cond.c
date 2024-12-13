@@ -10,9 +10,11 @@
 // Общий массив для записи и чтения
 char shared_array[ARRAY_SIZE];
 int write_index = 0;
+int data_available = 0; // Флаг для проверки обновления данных
 
-// Мьютекс для синхронизации
+// Мьютекс и условная переменная для синхронизации
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condvar = PTHREAD_COND_INITIALIZER;
 
 // Функция для пишущего потока
 void* writer_thread() {
@@ -29,8 +31,12 @@ void* writer_thread() {
 
         printf("Writer: записал %d в массив (индекс %d)\n", i, write_index);
         write_index += written;
+        data_available = 1; // Устанавливаем флаг наличия новых данных
 
-        pthread_mutex_unlock(&mutex);
+        // Уведомляем читающие потоки
+        pthread_cond_broadcast(&condvar);
+
+        pthread_mutex_unlock(&mutex);ф
         sleep(1);
     }
 
@@ -43,6 +49,11 @@ void* reader_thread(void* arg) {
 
     while (1) {
         pthread_mutex_lock(&mutex);
+
+        // Ждем сигнала от пишущего потока
+        while (!data_available) {
+            pthread_cond_wait(&condvar, &mutex);
+        }
 
         // Выводим содержимое массива
         printf("Reader %ld: %s\n", tid, shared_array);
@@ -76,8 +87,9 @@ int main() {
         pthread_join(readers[i], NULL);
     }
 
-    // Завершаем работу
+    // Освобождаем ресурсы
     pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&condvar);
 
     return 0;
 }

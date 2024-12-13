@@ -11,26 +11,29 @@
 char shared_array[ARRAY_SIZE];
 int write_index = 0;
 
-// Мьютекс для синхронизации
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// rwlock для синхронизации доступа
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 // Функция для пишущего потока
 void* writer_thread() {
     for (int i = 1; i <= ARRAY_SIZE; i++) {
-        pthread_mutex_lock(&mutex);
+        // Блокировка для записи
+        pthread_rwlock_wrlock(&rwlock);
 
         // Записываем число в массив
         int written = snprintf(shared_array + write_index, ARRAY_SIZE - write_index, "%d ", i);
         if (written < 0 || write_index + written >= ARRAY_SIZE) {
             printf("Writer: недостаточно места в массиве\n");
-            pthread_mutex_unlock(&mutex);
+            pthread_rwlock_unlock(&rwlock);
             break;
         }
 
         printf("Writer: записал %d в массив (индекс %d)\n", i, write_index);
         write_index += written;
 
-        pthread_mutex_unlock(&mutex);
+        // Освобождаем блокировку записи
+        pthread_rwlock_unlock(&rwlock);
+
         sleep(1);
     }
 
@@ -42,12 +45,14 @@ void* reader_thread(void* arg) {
     long tid = (long)arg;
 
     while (1) {
-        pthread_mutex_lock(&mutex);
+        // Блокировка для чтения
+        pthread_rwlock_rdlock(&rwlock);
 
         // Выводим содержимое массива
         printf("Reader %ld: %s\n", tid, shared_array);
 
-        pthread_mutex_unlock(&mutex);
+        // Освобождаем блокировку чтения
+        pthread_rwlock_unlock(&rwlock);
 
         sleep(1);
     }
@@ -76,8 +81,8 @@ int main() {
         pthread_join(readers[i], NULL);
     }
 
-    // Завершаем работу
-    pthread_mutex_destroy(&mutex);
+    // Освобождаем ресурсы
+    pthread_rwlock_destroy(&rwlock);
 
     return 0;
 }
