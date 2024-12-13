@@ -5,12 +5,13 @@
 #include <time.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <sys/types.h>
 #include <signal.h>
 
 #define FTOK_PATH "."
+#define MAX_STR_SIZE 64
 
 int semid; // Глобальная переменная для идентификатора семафора
+char shared_data[MAX_STR_SIZE]; // Разделяемая строка для данных
 
 // Операции над семафором
 void sem_lock(int semid) {
@@ -34,9 +35,8 @@ void cleanup() {
     if (semctl(semid, 0, IPC_RMID) == -1) {
         perror("semctl IPC_RMID failed");
     } else {
-        printf("Семафор успешно удален. Завершение программы.\n");
+        printf("Передающая программа: семафор удалён.\n");
     }
-
     exit(0);
 }
 
@@ -76,9 +76,10 @@ int main() {
     while (1) {
         sem_lock(semid);
 
+        // Запись текущего времени в общий буфер
         time_t now = time(NULL);
-        char *local_time = strtok(asctime(localtime(&now)), "\n");
-        printf("Передано: %s (PID: %d)\n", local_time, getpid());
+        struct tm *tm_info = localtime(&now);
+        snprintf(shared_data, sizeof(shared_data), asctime(tm_info), getpid());
 
         sem_unlock(semid);
         sleep(3);
