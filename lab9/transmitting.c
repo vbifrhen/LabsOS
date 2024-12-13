@@ -4,11 +4,10 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/ipc.h>
-#include <sys/shm.h>
+#include <sys/sem.h>
 #include <sys/types.h>
 #include <signal.h>
 
-#define SHM_SIZE 1024
 #define FTOK_PATH "."
 
 typedef struct {
@@ -16,66 +15,83 @@ typedef struct {
     char time_str[64];
 } shared_data;
 
-int shmid; // Глобальная переменная для хранения идентификатора разделяемой памяти
+int semid; // Глобальная переменная для идентификатора семафора
+
+// Операции над семафором
+void sem_lock(int semid) {
+    struct sembuf sb = {0, -1, 0};
+    if (semop(semid, &sb, 1) == -1) {
+        perror("semop lock failed");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void sem_unlock(int semid) {
+    struct sembuf sb = {0, 1, 0};
+    if (semop(semid, &sb, 1) == -1) {
+        perror("semop unlock failed");
+        exit(EXIT_FAILURE);
+    }
+}
 
 void cleanup() {
-    // Удаляем сегмент разделяемой памяти
-    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
-        perror("shmctl");
+    // Удаляем семафор
+    if (semctl(semid, 0, IPC_RMID) == -1) {
+        perror("semctl IPC_RMID failed");
     } else {
-        printf("Сегмент разделяемой памяти успешно удален. Завершение программы.\n");
-    }
-     // Удаляем сегмент (опционально, если передающая программа отвечает за удаление)
-    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
-        perror("shmctl IPC_RMID failed");
-    } else {
-        printf("Передающая программа: сегмент памяти удалён.\n");
+        printf("Передающая программа: семафор удалён.\n");
     }
 
     exit(0);
 }
 
 int main() {
-    key_t shm_key;
-    shared_data *data;
+    key_t sem_key;
 
     // Устанавливаем обработчики сигналов
     signal(SIGINT, cleanup);   // Ctrl+C
     signal(SIGTERM, cleanup);  // Команда kill
-    signal(SIGQUIT, cleanup);  // Ctrl+"\""
+    signal(SIGQUIT, cleanup);  // Ctrl+"\"
 
-    // Генерация уникального ключа
-    shm_key = ftok(FTOK_PATH, 'A');
-    if (shm_key == -1) {
-        perror("ftok");
+    // Генерация уникального ключа для семафора
+    sem_key = ftok(FTOK_PATH, 'A');
+    if (sem_key == -1) {
+        perror("Ошибка генерации ключа ftok для семафора");
         exit(EXIT_FAILURE);
     }
 
-    // Создание разделяемой памяти
-    shmid = shmget(shm_key, SHM_SIZE, IPC_CREAT | IPC_EXCL | 0666);
-    if (shmid == -1) {
-        perror("shmget");
-        printf("Передающая программа уже запущена. Завершение.\n");
+
+    // Создание семафора
+    semid = semget(sem_key, 1, IPC_CREAT | IPC_EXCL | 0666);
+    if (semid == -1) {
+        perror("semget");
+        shmctl(shmid, IPC_RMID, NULL);
         exit(EXIT_FAILURE);
     }
 
-    // Присоединяем разделяемую память
-    data = (shared_data *)shmat(shmid, NULL, 0);
-    if (data == (void *)-1) {
-        perror("shmat");
-        cleanup(); // Удаляем сегмент, если ошибка в `shmat`
+    // Инициализация семафора значением 1
+    if (semctl(semid, 0, SETVAL, 1) == -1) {
+        perror("semctl SETVAL failed");
+        shmctl(shmid, IPC_RMID, NULL);
+        semctl(semid, 0, IPC_RMID);
+        exit(EXIT_FAILURE);
     }
 
-    printf("Передающая программа запущена. PID: %d, SHM_KEY: %d\n", getpid(), shm_key);
+    printf("Передающая программа запущена. PID: %d\n", getpid());
 
-    // Бесконечный цикл передачи данных
+    // Основной цикл передачи данных
     while (1) {
+        sem_lock(semid);
+
         time_t now = time(NULL);
         struct tm *tm_info = localtime(&now);
         strncpy(data->time_str, asctime(tm_info), sizeof(data->time_str) - 1);
-        data->time_str[sizeof(data->time_str) - 1] = '\0'; // Удаляем лишние символы
+        data->time_str[sizeof(data->time_str) - 1] = '\0';
         data->pid = getpid();
 
+        printf("Передано: %s (PID: %d)\n", data->time_str, data->pid);
+
+        sem_unlock(semid);
         sleep(3);
     }
 
