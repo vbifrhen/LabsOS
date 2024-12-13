@@ -83,8 +83,5 @@ int main() {
         pthread_join(readers[i], NULL);
     }
 
-    // Освобождаем ресурсы
-    pthread_rwlock_destroy(&rwlock);
-
     return 0;
 }
