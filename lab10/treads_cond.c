@@ -36,7 +36,7 @@ void* writer_thread() {
         // Уведомляем читающие потоки
         pthread_cond_broadcast(&condvar);
 
-        pthread_mutex_unlock(&mutex);ф
+        pthread_mutex_unlock(&mutex);
         sleep(1);
     }
 
