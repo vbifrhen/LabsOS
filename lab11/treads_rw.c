@@ -31,10 +31,12 @@ void* writer_thread() {
         printf("Writer: записал %d в массив (индекс %d)\n", i, write_index);
         write_index += written;
 
+
+        sleep(1);
         // Освобождаем блокировку записи
         pthread_rwlock_unlock(&rwlock);
 
-        sleep(1);
+
     }
 
     return NULL;
@@ -54,7 +56,7 @@ void* reader_thread(void* arg) {
         // Освобождаем блокировку чтения
         pthread_rwlock_unlock(&rwlock);
 
-        sleep(1);
+        usleep(100000);
     }
 
     return NULL;

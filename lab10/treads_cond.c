@@ -60,7 +60,7 @@ void* reader_thread(void* arg) {
 
         pthread_mutex_unlock(&mutex);
 
-        sleep(1);
+        //sleep(1);
     }
 
     return NULL;
